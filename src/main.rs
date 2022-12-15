@@ -1,19 +1,20 @@
 pub mod controllers;
+pub mod models;
 pub mod services;
 
 use actix_web::{
-    Responder, HttpResponse, HttpServer, App, get
+    Responder, HttpServer, App, get
 };
 use crate::controllers::forecast_controller::configure_forecast_controller_routes;
 
 // "impl Responder" means, "can be converted to HTTP response"
 #[get("/")]
 async fn index() -> impl Responder {
-    HttpResponse::Ok().body("This is the main page of the website.")
-}
+    "This is the main page of the website."
+} // todo try some front-end libraries here
 
 #[actix_web::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> std::io::Result<()> { // "()" is essentially "null"
     println!("Starting web server...");
 
     HttpServer::new(|| {
@@ -22,6 +23,7 @@ async fn main() -> std::io::Result<()> {
             .service(index) // Use service to register routes decorated with macros
     })
     .bind(("127.0.0.1", 8080))? // "?" means "return error if this fails, else unwrap"
+    // todo print message once the server starts
     .run()
     .await
 }
