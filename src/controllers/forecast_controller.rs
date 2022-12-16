@@ -17,9 +17,9 @@ struct Celsius {
 pub fn configure_forecast_controller_routes(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/api/v1/forecast")
-            .route("/{location}/{days}", web::get().to(forecast))
             .route("/to-celsius/{farenheight}", web::get().to(to_celsius))
             .route("/to-farenheight/{celsius}", web::get().to(to_farenheight))
+            .route("/{location}/{days}", web::get().to(forecast)) // must go after others
     );
 }
 
