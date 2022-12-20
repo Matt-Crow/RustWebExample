@@ -8,9 +8,11 @@ An example web application using Rust for the backend.
 
 ## Available routes
 
-- `localhost:8080/api/v1/forecast/{location}/{days}`
-- `localhost:8080/api/v1/forecast/to-farenheight/{celsius}`
-- `localhost:8080/api/v1/forecast/to-celsius/{farenheight}`
+- POST `localhost:8080/api/v1/anchors`
+- GET `localhost:8080/api/v1/anchors/{name}`
+- GET `localhost:8080/api/v1/forecast/{location}/{days}`
+- GET `localhost:8080/api/v1/forecast/to-farenheight/{celsius}`
+- GET `localhost:8080/api/v1/forecast/to-celsius/{farenheight}`
 
 ## Helpful links
 

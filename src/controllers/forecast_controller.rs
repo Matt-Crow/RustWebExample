@@ -19,7 +19,7 @@ struct Celsius {
 /// Note the mutable borrow of the `ServiceConfig`.
 pub fn configure_forecast_controller_routes(cfg: &mut web::ServiceConfig) {
     cfg.service(
-        web::scope("/api/v1/forecast")
+        web::scope("/forecast")
             .route("/to-celsius/{farenheight}", web::get().to(to_celsius_handler))
             .route("/to-farenheight/{celsius}", web::get().to(to_farenheight_handler))
             .route("/{location}/{days}", web::get().to(forecast_handler)) // must go after others
