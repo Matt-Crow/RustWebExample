@@ -13,9 +13,9 @@ impl Forecast {
         Forecast {
             degrees_in_farenheight,
             degrees_in_celsius,
-            location: location.to_string() // function borrows reference to location,
-                                           // so make a copy and take ownership
-                                           // of that copy
+            location: String::from(location) // function borrows reference to 
+                                             // location, so make a copy and 
+                                             // take ownership of that copy
         }
     }
 

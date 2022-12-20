@@ -23,19 +23,23 @@ impl Anchor {
     pub fn new(name: &str) -> Self {
         Anchor {
             id: None,
-            name: name.to_string(),
+            name: String::from(name),
             accuracy: None,
             years_employed: 0
         }
     }
 
     /// returns a copy of this news anchor, except with the given name
-    pub fn with_name(&self) -> Self {
+    pub fn with_name(&self, name: &str) -> Self {
+        // note that Option's do not implement Copy, so we must explicitly clone
+        // them instead of relying on update syntax, as update syntax would move
+        // the Options from self to the return value, thus making self invalid
         Anchor {
             id: self.id.clone(),
-            name: self.name.to_string(),
+            name: String::from(name),
             accuracy: self.accuracy.clone(),
-            years_employed: self.years_employed
+            ..*self // copy other properties from this, calling copy() on any
+                    // that derive from Copy
         }
     }
 
@@ -44,9 +48,9 @@ impl Anchor {
     pub fn with_accuracy(&self, accuracy: f32) -> Self {
         Anchor {
             id: self.id.clone(),
-            name: self.name.to_string(),
+            name: self.name.clone(),
             accuracy: Some(accuracy),
-            years_employed: self.years_employed
+            ..*self
         }
     }
 
@@ -54,7 +58,7 @@ impl Anchor {
     pub fn with_years_employed(&self, years_employed: u8) -> Self {
         Anchor {
             id: self.id.clone(),
-            name: self.name.to_string(),
+            name: self.name.clone(),
             accuracy: self.accuracy.clone(),
             years_employed
         }
@@ -64,9 +68,28 @@ impl Anchor {
     pub fn with_id(&self, id: u128) -> Self {
         Anchor { 
             id: Some(id), 
-            name: self.name.to_string(), 
+            name: self.name.clone(), 
             accuracy: self.accuracy.clone(), 
-            years_employed: self.years_employed
+            ..*self
+        }
+    }
+
+    pub fn merge(first: &Anchor, second: &Anchor) -> Self {
+        let mut id = first.id.clone();
+        if let Some(new_id) = second.id {
+            id = Some(new_id);
+        }
+
+        let mut accuracy = first.accuracy.clone();
+        if let Some(new_accuracy) = second.accuracy {
+            accuracy = Some(new_accuracy);
+        }
+
+        Anchor {
+            id,
+            name: second.name.clone(),
+            accuracy,
+            years_employed: second.years_employed
         }
     }
 
