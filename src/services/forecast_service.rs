@@ -18,15 +18,15 @@ pub fn to_farenheight(celsius: f32) -> f32 {
 /// a total of `days` seconds to simulate the 3rd party delay.
 pub fn get_forecast(location: &str, days: u8) -> Vec<Forecast> {
     let mut forecasts: Vec<Forecast> = Vec::new();
-    let mut d: f32;
+    let mut degrees_celsius: f32;
 
-    for i in 0..days {
+    for i in 0..days { // inclusive of start, exclusive of end
         thread::sleep(time::Duration::from_secs(1));
         
-        d = (i as f32) * 20.0;
+        degrees_celsius = (i as f32) * 20.0;
         forecasts.push(Forecast::new(
-            to_farenheight(d),
-            d,
+            to_farenheight(degrees_celsius),
+            degrees_celsius,
             location
         ));
     }

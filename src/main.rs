@@ -8,7 +8,7 @@ use actix_web::{
 use crate::controllers::forecast_controller::configure_forecast_controller_routes;
 
 // "impl Responder" means, "can be converted to HTTP response"
-#[get("/")]
+#[get("/")] // trait-based routing
 async fn index() -> impl Responder {
     "This is the main page of the website."
 } // todo try some front-end libraries here
