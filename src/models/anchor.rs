@@ -4,7 +4,7 @@ use serde::{Serialize, Deserialize};
 
 
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Anchor {
     id: Option<u128>,
     name: String,
@@ -35,9 +35,9 @@ impl Anchor {
         // them instead of relying on update syntax, as update syntax would move
         // the Options from self to the return value, thus making self invalid
         Anchor {
-            id: self.id.clone(),
+            id: self.id,
             name: String::from(name),
-            accuracy: self.accuracy.clone(),
+            accuracy: self.accuracy,
             ..*self // copy other properties from this, calling copy() on any
                     // that derive from Copy
         }
@@ -47,7 +47,7 @@ impl Anchor {
     /// accuracy
     pub fn with_accuracy(&self, accuracy: f32) -> Self {
         Anchor {
-            id: self.id.clone(),
+            id: self.id,
             name: self.name.clone(),
             accuracy: Some(accuracy),
             ..*self
@@ -57,9 +57,9 @@ impl Anchor {
     /// returns a copy of this news anchor, except with the given years employed
     pub fn with_years_employed(&self, years_employed: u8) -> Self {
         Anchor {
-            id: self.id.clone(),
+            id: self.id,
             name: self.name.clone(),
-            accuracy: self.accuracy.clone(),
+            accuracy: self.accuracy,
             years_employed
         }
     }
@@ -69,18 +69,18 @@ impl Anchor {
         Anchor { 
             id: Some(id), 
             name: self.name.clone(), 
-            accuracy: self.accuracy.clone(), 
+            accuracy: self.accuracy, 
             ..*self
         }
     }
 
     pub fn merge(first: &Anchor, second: &Anchor) -> Self {
-        let mut id = first.id.clone();
+        let mut id = first.id;
         if let Some(new_id) = second.id {
             id = Some(new_id);
         }
 
-        let mut accuracy = first.accuracy.clone();
+        let mut accuracy = first.accuracy;
         if let Some(new_accuracy) = second.accuracy {
             accuracy = Some(new_accuracy);
         }
@@ -114,6 +114,17 @@ impl Anchor {
     }
 }
 
+impl Clone for Anchor {
+    fn clone(&self) -> Self {
+        Self { 
+            id: self.id, 
+            name: self.name.clone(), 
+            accuracy: self.accuracy, 
+            years_employed: self.years_employed 
+        }
+    }
+}
+
 impl Display for Anchor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.accuracy {
@@ -126,5 +137,11 @@ impl Display for Anchor {
                     self.name, self.years_employed)
             }
         }
+    }
+}
+
+impl PartialEq for Anchor {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
     }
 }

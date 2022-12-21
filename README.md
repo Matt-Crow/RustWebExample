@@ -6,6 +6,11 @@ An example web application using Rust for the backend.
 
 `cargo run`
 
+## Testing the App
+
+`cargo test`
+`cargo clippy`
+
 ## Available routes
 
 - POST `localhost:8080/api/v1/anchors`
