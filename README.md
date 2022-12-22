@@ -22,3 +22,4 @@ An example web application using Rust for the backend.
 ## Helpful links
 
 - [Actix](https://actix.rs/docs/getting-started)
+- [Mockall](https://crates.io/crates/mockall)

@@ -11,7 +11,7 @@ pub struct AnchorService {
 impl AnchorService {
 
     pub fn new<T>(repo: T) -> Self 
-    where T: AnchorRepository + 'static
+    where T: AnchorRepository + Sync + Send + 'static // repo must live no shorter than self
     {
         Self {
             repository: Box::new(repo)
@@ -79,44 +79,40 @@ pub mod tests {
     }
 
     #[test]
-    fn create_given_anchor_with_id_returns_error() -> Result<(), String> {
+    fn create_given_anchor_with_id_returns_error() {
         let mock = MockDummy::new();
         let mut sut = AnchorService::new(mock);
 
         let result = sut.create(Anchor::new("Foo Bar").with_id(1));
 
         assert!(result.is_err());
-
-        Ok(())
     }
 
     #[test]
-    fn create_given_anchor_without_id_forwards_to_repository() -> Result<(), String> {
+    fn create_given_anchor_without_id_forwards_to_repository() {
         let mut mock = MockDummy::new();
         mock
             .expect_store()
             .returning(|x| Ok(x.clone()));
         let mut sut = AnchorService::new(mock);
 
-        sut.create(Anchor::new("Foo Bar"))?;
+        let result = sut.create(Anchor::new("Foo Bar"));
 
-        Ok(())
+        assert!(result.is_ok());
     }
 
     #[test]
-    fn update_given_anchor_with_no_id_returns_error() -> Result<(), String> {
+    fn update_given_anchor_with_no_id_returns_error() {
         let mock = MockDummy::new();
         let mut sut = AnchorService::new(mock);
 
         let result = sut.update(Anchor::new("Foo Bar"));
 
         assert!(result.is_err());
-
-        Ok(())
     }
 
     #[test]
-    fn update_given_anchor_not_in_repository_returns_error() -> Result<(), String> {
+    fn update_given_anchor_not_in_repository_returns_error() {
         let mut mock = MockDummy::new();
         mock
             .expect_get_by_id()
@@ -126,12 +122,10 @@ pub mod tests {
         let result = sut.update(Anchor::new("Foo Bar").with_id(1));
 
         assert!(result.is_err());
-
-        Ok(())
     }
 
     #[test]
-    fn update_given_anchor_in_repository_forwards_to_store() -> Result<(), String> {
+    fn update_given_anchor_in_repository_forwards_to_store() {
         let mut mock = MockDummy::new();
         mock
             .expect_get_by_id()
@@ -141,13 +135,13 @@ pub mod tests {
             .returning(|a| Ok(a.clone()));
         let mut sut = AnchorService::new(mock);
 
-        sut.update(Anchor::new("Baz Qux").with_id(1))?;
+        let result = sut.update(Anchor::new("Baz Qux").with_id(1));
 
-        Ok(())
+        assert!(result.is_ok());
     }
 
     #[test]
-    fn get_all_forwards_to_repository() -> Result<(), String> {
+    fn get_all_forwards_to_repository() {
         let mut mock = MockDummy::new();
         mock
             .expect_get_all()
@@ -155,13 +149,13 @@ pub mod tests {
             .returning(|| Ok(Vec::new()));
         let sut = AnchorService::new(mock);
 
-        sut.get_all()?;
+        let result =sut.get_all();
 
-        Ok(())
+        assert!(result.is_ok());
     }
 
     #[test]
-    fn get_by_id_forwards_to_repository() -> Result<(), String> {
+    fn get_by_id_forwards_to_repository() {
         let mut mock = MockDummy::new();
         mock
             .expect_get_by_id()
@@ -169,13 +163,13 @@ pub mod tests {
             .returning(|id| Ok(Some(Anchor::new("Foo Bar").with_id(id))));
         let sut = AnchorService::new(mock);
 
-        sut.get_by_id(1)?;
+        let result = sut.get_by_id(1);
 
-        Ok(())
+        assert!(result.is_ok());
     }
 
     #[test]
-    fn delete_given_an_invalid_id_returns_error() -> Result<(), String> {
+    fn delete_given_an_invalid_id_returns_error() {
         let mut mock = MockDummy::new();
         mock
             .expect_remove_by_id()
@@ -185,12 +179,10 @@ pub mod tests {
         let result = sut.delete_anchor(1);
 
         assert!(result.is_err());
-
-        Ok(())
     }
 
     #[test]
-    fn delete_given_a_valid_id_forwards_to_repository() -> Result<(), String> {
+    fn delete_given_a_valid_id_forwards_to_repository() {
         let mut mock = MockDummy::new();
         mock
             .expect_remove_by_id()
@@ -200,7 +192,5 @@ pub mod tests {
         let result = sut.delete_anchor(1);
 
         assert!(result.is_ok());
-        
-        Ok(())
     }
 }

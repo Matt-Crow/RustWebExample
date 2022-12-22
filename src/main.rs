@@ -6,7 +6,13 @@ pub mod services;
 use actix_web::{
     Responder, HttpServer, App, get, web
 };
-use crate::controllers::{forecast_controller::configure_forecast_controller_routes, anchor_controller::configure_anchor_controller_routes};
+use crate::{
+    controllers::{
+        forecast_controller::configure_forecast_controller_routes, 
+        anchor_controller::configure_anchor_controller_routes
+    }, 
+    services::service_provider::ServiceProvider
+};
 
 // "impl Responder" means, "can be converted to HTTP response"
 #[get("/")] // trait-based routing
@@ -18,8 +24,11 @@ async fn index() -> impl Responder {
 async fn main() -> std::io::Result<()> { // "()" is essentially "null"
     println!("Starting web server...");
 
-    HttpServer::new(|| {
+    let sp = web::Data::new(ServiceProvider::default());
+
+    HttpServer::new(move || {
         App::new()
+            .app_data(sp.clone())
             .configure(configure_forecast_controller_routes)
             .service(index) // Use service to register routes decorated with macros
             .service(web::scope("/api/v1")

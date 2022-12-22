@@ -1,6 +1,9 @@
-use actix_web::{web::{self, Json}, Responder, HttpResponse};
+use actix_web::{web::{self, Json}, Responder, HttpResponse, error};
 
-use crate::models::anchor::Anchor;
+use crate::{
+    models::anchor::Anchor, 
+    services::service_provider::ServiceProvider
+};
 
 pub fn configure_anchor_controller_routes(cfg: &mut web::ServiceConfig) {
     cfg.service(web::resource("/anchors")
@@ -16,23 +19,28 @@ pub fn configure_anchor_controller_routes(cfg: &mut web::ServiceConfig) {
     );
 }
 
-async fn get_all_anchors() -> Json<Vec<Anchor>> {
-    Json(vec![
-        Anchor::new("Foo"),
-        Anchor::new("Bar")
-            .with_years_employed(2),
-        Anchor::new("Baz")
-            .with_years_employed(5)
-            .with_accuracy(0.33)
-    ])
+async fn get_all_anchors(service_provider: web::Data<ServiceProvider>) -> actix_web::Result<Json<Vec<Anchor>>> {
+    let lock = service_provider.anchors();
+    let anchors = lock.lock().unwrap();
+
+    match anchors.get_all() {
+        Ok(data) => Ok(Json(data)),
+        Err(msg) => Err(error::ErrorInternalServerError(msg)) // use error helper functions to create actix errors
+    }
 }
 
 async fn get_anchor_by_name(name: web::Path<String>) -> Json<Anchor> {
     Json(Anchor::new(&name))
 }
 
-async fn post_anchor(anchor: Json<Anchor>) -> Json<Anchor> {
-    Json(anchor.with_id(12345))
+async fn post_anchor(anchor: Json<Anchor>, service_provider: web::Data<ServiceProvider>) -> actix_web::Result<Json<Anchor>> {
+    let lock = service_provider.anchors();
+    let mut creator = lock.lock().unwrap();
+    let a: Anchor = anchor.0;
+    match creator.create(a) {
+        Ok(data) => Ok(Json(data)),
+        Err(msg) => Err(error::ErrorBadRequest(msg))
+    }
 }
 
 async fn put_anchor(name: web::Path<String>, anchor: Json<Anchor>) -> Json<Anchor> {
