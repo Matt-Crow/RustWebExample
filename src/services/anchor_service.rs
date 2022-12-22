@@ -42,11 +42,11 @@ impl AnchorService {
         self.repository.get_all()
     }
 
-    pub fn get_by_id(&self, id: u128) -> Result<Option<Anchor>, String> {
+    pub fn get_by_id(&self, id: u32) -> Result<Option<Anchor>, String> {
         self.repository.get_by_id(id)
     }
 
-    pub fn delete_anchor(&mut self, id: u128) -> Result<(), String> {
+    pub fn delete_anchor(&mut self, id: u32) -> Result<(), String> {
         let was_removed = self.repository.remove_by_id(id)?;
 
         if was_removed {
@@ -73,8 +73,8 @@ pub mod tests {
         impl AnchorRepository for Dummy {
             fn store(&mut self, anchor: &Anchor) -> Result<Anchor, String>;
             fn get_all(&self) -> Result<Vec<Anchor>, String>;
-            fn get_by_id(&self, id: u128) -> Result<Option<Anchor>, String>;
-            fn remove_by_id(&mut self, id: u128) -> Result<bool, String>;
+            fn get_by_id(&self, id: u32) -> Result<Option<Anchor>, String>;
+            fn remove_by_id(&mut self, id: u32) -> Result<bool, String>;
         }
     }
 

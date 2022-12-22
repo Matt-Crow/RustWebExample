@@ -1,10 +1,16 @@
-pub mod controllers;
-pub mod models;
-pub mod repositories;
-pub mod services;
+// Declare which modules (folders) should be compiled / loaded.
+// These are searched recursively to load any of their declared modules as well.
+mod controllers;
+pub mod models; // makes the models module upblic, in case other programs need it
+mod repositories;
+mod services;
 
 use actix_web::{
-    Responder, HttpServer, App, get, web
+    Responder, // "this can be converted to an HTTP response"
+    HttpServer, 
+    App, 
+    get, 
+    web
 };
 use crate::{
     controllers::{
@@ -14,7 +20,6 @@ use crate::{
     services::service_provider::ServiceProvider
 };
 
-// "impl Responder" means, "can be converted to HTTP response"
 #[get("/")] // trait-based routing
 async fn index() -> impl Responder {
     "This is the main page of the website."
@@ -35,9 +40,9 @@ async fn main() -> std::io::Result<()> { // "()" is essentially "null"
                 .configure(configure_forecast_controller_routes)
                 .configure(configure_anchor_controller_routes)
             )
-    })
-    .bind(("127.0.0.1", 8080))? // "?" means "return error if this fails, else unwrap"
-    // todo print message once the server starts
-    .run()
-    .await
+        })
+        .bind(("127.0.0.1", 8080))? // "?" means "return error if this fails, else unwrap"
+        // todo print message once the server starts
+        .run()
+        .await
 }

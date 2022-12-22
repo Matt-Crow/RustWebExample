@@ -6,7 +6,7 @@ use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Anchor {
-    id: Option<u128>,
+    id: Option<u32>,
     name: String,
     accuracy: Option<f32>,
 
@@ -65,7 +65,7 @@ impl Anchor {
     }
 
     /// returns a copy of this news anchor, except with the given ID
-    pub fn with_id(&self, id: u128) -> Self {
+    pub fn with_id(&self, id: u32) -> Self {
         Anchor { 
             id: Some(id), 
             name: self.name.clone(), 
@@ -109,7 +109,7 @@ impl Anchor {
     }
 
     /// returns this news anchor's ID
-    pub fn id(&self) -> Option<u128> {
+    pub fn id(&self) -> Option<u32> {
         self.id
     }
 }

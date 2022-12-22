@@ -5,8 +5,8 @@ use crate::models::anchor::Anchor;
 use super::anchor_repository::AnchorRepository;
 
 pub struct InMemoryAnchorRepository {
-    next_id: Mutex<u128>,
-    stored: Mutex<HashMap<u128, Anchor>>
+    next_id: Mutex<u32>,
+    stored: Mutex<HashMap<u32, Anchor>>
 }
 
 impl InMemoryAnchorRepository {
@@ -15,14 +15,6 @@ impl InMemoryAnchorRepository {
             next_id: Mutex::new(1),
             stored: Mutex::new(HashMap::new())
         }
-    }
-
-    pub fn containing(anchors: &Vec<Anchor>) -> Result<Self, String> {
-        let mut repo = InMemoryAnchorRepository::new();
-        for anchor in anchors {
-            repo.store(anchor)?;
-        }
-        Ok(repo)
     }
 }
 
@@ -49,7 +41,7 @@ impl AnchorRepository for InMemoryAnchorRepository {
         Ok(self.stored.lock().unwrap().values().cloned().collect())
     }
 
-    fn get_by_id(&self, id: u128) -> Result<Option<Anchor>, String> {
+    fn get_by_id(&self, id: u32) -> Result<Option<Anchor>, String> {
         let binding = self.stored.lock().unwrap();
         let found = binding.get(&id);
         match found {
@@ -58,7 +50,7 @@ impl AnchorRepository for InMemoryAnchorRepository {
         }
     }
 
-    fn remove_by_id(&mut self, id: u128) -> Result<bool, String> {
+    fn remove_by_id(&mut self, id: u32) -> Result<bool, String> {
         let mut binding = self.stored.lock().unwrap();
         if binding.contains_key(&id) {
             binding.remove(&id);
@@ -108,7 +100,9 @@ mod tests {
     #[test]
     fn store_given_old_anchor_id_updates_the_stored_anchor() -> Result<(), String> {
         let old_anchor = Anchor::new("Foo Bar").with_id(1);
-        let mut sut = InMemoryAnchorRepository::containing(&vec![old_anchor.clone()])?;
+        let mut sut = InMemoryAnchorRepository::new();
+        sut.store(&old_anchor)?;
+        
         let new_anchor = old_anchor.with_name("Baz Qux");
 
         sut.store(&new_anchor)?;
@@ -139,7 +133,9 @@ mod tests {
             Anchor::new("Foo Bar").with_id(1),
             Anchor::new("Baz Qux").with_id(2)
         ];
-        let sut = InMemoryAnchorRepository::containing(&anchors)?;
+        let mut sut = InMemoryAnchorRepository::new();
+        sut.store(&anchors[0])?;
+        sut.store(&anchors[1])?;
         let result = sut.get_all()?;
 
         assert!(result.contains(&anchors[0]));
@@ -163,7 +159,8 @@ mod tests {
     #[test]
     fn get_by_id_given_valid_id_returns_anchor_with_that_id() -> Result<(), String> {
         let anchor = Anchor::new("Foo Bar").with_id(1);
-        let sut = InMemoryAnchorRepository::containing(&vec![anchor])?;
+        let mut sut = InMemoryAnchorRepository::new();
+        sut.store(&anchor)?;
 
         let result = sut.get_by_id(1);
 
@@ -186,7 +183,8 @@ mod tests {
 
     #[test]
     fn remove_by_id_given_valid_id_returns_true() -> Result<(), String> {
-        let mut sut = InMemoryAnchorRepository::containing(&vec![Anchor::new("Foo Bar").with_id(1)])?;
+        let mut sut = InMemoryAnchorRepository::new();
+        sut.store(&Anchor::new("Foo Bar").with_id(1))?;
 
         let result = sut.remove_by_id(1)?;
 
@@ -197,7 +195,8 @@ mod tests {
 
     #[test]
     fn remove_by_id_given_valid_id_deletes_from_repo() -> Result<(), String> {
-        let mut sut = InMemoryAnchorRepository::containing(&vec![Anchor::new("Foo Bar").with_id(1)])?;
+        let mut sut = InMemoryAnchorRepository::new();
+        sut.store(&Anchor::new("Foo Bar").with_id(1))?;
 
         sut.remove_by_id(1)?;
 
