@@ -31,7 +31,7 @@ async fn main() -> std::io::Result<()> { // "()" is essentially "null"
     println!("Starting web server...");
 
 
-    let connection = create_client("localhost", 0, AuthMethod::Windows());
+    let connection = create_client("localhost", 0, AuthMethod::Windows(/* what package WindowsAuth? */));
 
 
     let sp = web::Data::new(ServiceProvider::default());
