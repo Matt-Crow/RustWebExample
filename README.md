@@ -26,3 +26,4 @@ An example web application using Rust for the backend.
 
 - [Actix](https://actix.rs/docs/getting-started)
 - [Mockall](https://crates.io/crates/mockall)
+- [Tiberius](https://crates.io/crates/tiberius)

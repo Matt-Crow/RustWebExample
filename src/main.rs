@@ -12,12 +12,13 @@ use actix_web::{
     get, 
     web
 };
+use tiberius::AuthMethod;
 use crate::{
     controllers::{
         forecast_controller::configure_forecast_controller_routes, 
         anchor_controller::configure_anchor_controller_routes
     }, 
-    services::service_provider::ServiceProvider
+    services::service_provider::ServiceProvider, repositories::database::connection::create_client
 };
 
 #[get("/")] // trait-based routing
@@ -28,6 +29,10 @@ async fn index() -> impl Responder {
 #[actix_web::main]
 async fn main() -> std::io::Result<()> { // "()" is essentially "null"
     println!("Starting web server...");
+
+
+    let connection = create_client("localhost", 0, AuthMethod::Windows());
+
 
     let sp = web::Data::new(ServiceProvider::default());
 
