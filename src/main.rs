@@ -30,9 +30,16 @@ async fn index() -> impl Responder {
 async fn main() -> std::io::Result<()> { // "()" is essentially "null"
     println!("Starting web server...");
 
+    let connection = create_client(
+        "127.0.0.1", 
+        1433, // connection refused... maybe wrong port?
+        AuthMethod::sql_server("username", "password123") // move to env vars, make new user in MSSMS
+    ).await;
 
-    let connection = create_client("localhost", 0, AuthMethod::Windows(/* what package WindowsAuth? */));
-
+    match connection {
+        Ok(x) => println!("Yay {:#?}", x),
+        Err(x) => println!("Boo {:#?}", x)
+    }
 
     let sp = web::Data::new(ServiceProvider::default());
 
