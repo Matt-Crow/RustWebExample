@@ -20,7 +20,7 @@ pub fn get_forecast(location: &str, days: u8) -> Vec<Forecast> {
     let mut forecasts: Vec<Forecast> = Vec::new();
     let mut degrees_celsius: f32;
 
-    for i in 0..days { // inclusive of start, exclusive of end
+    for i in 0..days { // inclusive of start, exclusive of end. 1..=days
         thread::sleep(time::Duration::from_secs(1));
         
         degrees_celsius = (i as f32) * 20.0;

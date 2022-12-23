@@ -18,19 +18,19 @@ impl AnchorService {
         }
     }
 
-    pub fn create(&mut self, anchor: Anchor) -> Result<Anchor, String> {
+    pub fn create(&mut self, anchor: &Anchor) -> Result<Anchor, String> {
         match anchor.id() {
             Some(_) => Err("Cannot create Anchor who already has an ID".to_string()),
-            None => self.repository.store(&anchor)
+            None => self.repository.store(anchor)
         }
     }
 
-    pub fn update(&mut self, anchor: Anchor) -> Result<Anchor, String> {
+    pub fn update(&mut self, anchor: &Anchor) -> Result<Anchor, String> {
         match anchor.id() {
             Some(id) => {
                 let old = self.repository.get_by_id(id)?;
                 match old {
-                    Some(_) => self.repository.store(&anchor),
+                    Some(_) => self.repository.store(anchor),
                     None => Err(format!("No anchor exists with ID = {}", id))
                 }
             }
@@ -83,7 +83,7 @@ pub mod tests {
         let mock = MockDummy::new();
         let mut sut = AnchorService::new(mock);
 
-        let result = sut.create(Anchor::new("Foo Bar").with_id(1));
+        let result = sut.create(&Anchor::new("Foo Bar").with_id(1));
 
         assert!(result.is_err());
     }
@@ -96,7 +96,7 @@ pub mod tests {
             .returning(|x| Ok(x.clone()));
         let mut sut = AnchorService::new(mock);
 
-        let result = sut.create(Anchor::new("Foo Bar"));
+        let result = sut.create(&Anchor::new("Foo Bar"));
 
         assert!(result.is_ok());
     }
@@ -106,7 +106,7 @@ pub mod tests {
         let mock = MockDummy::new();
         let mut sut = AnchorService::new(mock);
 
-        let result = sut.update(Anchor::new("Foo Bar"));
+        let result = sut.update(&Anchor::new("Foo Bar"));
 
         assert!(result.is_err());
     }
@@ -119,7 +119,7 @@ pub mod tests {
             .returning(|_| Ok(None));
         let mut sut = AnchorService::new(mock);
 
-        let result = sut.update(Anchor::new("Foo Bar").with_id(1));
+        let result = sut.update(&Anchor::new("Foo Bar").with_id(1));
 
         assert!(result.is_err());
     }
@@ -135,7 +135,7 @@ pub mod tests {
             .returning(|a| Ok(a.clone()));
         let mut sut = AnchorService::new(mock);
 
-        let result = sut.update(Anchor::new("Baz Qux").with_id(1));
+        let result = sut.update(&Anchor::new("Baz Qux").with_id(1));
 
         assert!(result.is_ok());
     }

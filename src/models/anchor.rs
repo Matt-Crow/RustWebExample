@@ -129,7 +129,7 @@ impl Display for Anchor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.accuracy {
             Some(accuracy) => {
-                write!(f, "{}, a news anchor with {}% accuracy over {} years",
+                write!(f, "{}, a news anchor with {:.0}% accuracy over {} years",
                     self.name, accuracy * 100.0, self.years_employed)
             }
             None => {
