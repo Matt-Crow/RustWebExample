@@ -1,7 +1,7 @@
 // Declare which modules (folders) should be compiled / loaded.
 // These are searched recursively to load any of their declared modules as well.
 mod controllers;
-pub mod models; // makes the models module upblic, in case other programs need it
+pub mod models; // makes the models module public, in case other programs need it
 mod repositories;
 mod services;
 
@@ -12,13 +12,16 @@ use actix_web::{
     get, 
     web
 };
-use tiberius::AuthMethod;
 use crate::{
     controllers::{
         forecast_controller::configure_forecast_controller_routes, 
         anchor_controller::configure_anchor_controller_routes
     }, 
-    services::service_provider::ServiceProvider, repositories::database::connection::create_client
+    services::service_provider::ServiceProvider, 
+    repositories::database::connection::{
+        create_client,
+        create_config_from_env
+    }
 };
 
 #[get("/")] // trait-based routing
@@ -30,15 +33,18 @@ async fn index() -> impl Responder {
 async fn main() -> std::io::Result<()> { // "()" is essentially "null"
     println!("Starting web server...");
 
-    let connection = create_client(
-        "127.0.0.1", 
-        1433, // connection refused... maybe wrong port?
-        AuthMethod::sql_server("username", "password123") // move to env vars, make new user in MSSMS
-    ).await;
+    let config = match create_config_from_env() {
+        Ok(c) => c,
+        Err(error) => panic!("Error: {}", error)
+    };
+
+    println!("Config: {:#?}", config);
+    
+    let connection = create_client(config).await;
 
     match connection {
-        Ok(x) => println!("Yay {:#?}", x),
-        Err(x) => println!("Boo {:#?}", x)
+        Ok(x) => println!("Yay: {:#?}", x),
+        Err(x) => println!("Boo: {:#?}", x) // connection refused. TCP might be disabled
     }
 
     let sp = web::Data::new(ServiceProvider::default());
