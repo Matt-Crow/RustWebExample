@@ -1,9 +1,7 @@
 // Declare which modules (folders) should be compiled / loaded.
 // These are searched recursively to load any of their declared modules as well.
-mod controllers;
-pub mod models; // makes the models module public, in case other programs need it
-mod repositories;
-mod services;
+pub mod core; // can declare modules as public in case other programs need them
+mod infrastructure;
 
 use actix_web::{
     Responder, // "this can be converted to an HTTP response"
@@ -12,13 +10,14 @@ use actix_web::{
     get, 
     web
 };
+use tokio::net::TcpListener;
 use crate::{
-    controllers::{
+    infrastructure::controllers::{
         forecast_controller::configure_forecast_controller_routes, 
         anchor_controller::configure_anchor_controller_routes
     }, 
-    services::service_provider::ServiceProvider, 
-    repositories::database::connection::{
+    core::services::service_provider::ServiceProvider, 
+    infrastructure::database::connection::{
         create_client,
         create_config_from_env
     }
@@ -31,6 +30,21 @@ async fn index() -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> { // "()" is essentially "null"
+    tokio::spawn(async {
+        let choke = TcpListener::bind("127.0.0.1:1433").await;
+
+        match choke {
+            Ok(foo) => {
+                println!("Result: {:#?}", foo);
+                match foo.accept().await {
+                    Ok(_) => println!("OOPS! Looks like this thread is listening on port 1433! Resetting connection..."),
+                    Err(e) => panic!("{}", e)
+                }
+            },
+            Err(e) => panic!("{}", e)
+        }        
+    });
+
     println!("Starting web server...");
 
     let config = match create_config_from_env() {
@@ -60,7 +74,6 @@ async fn main() -> std::io::Result<()> { // "()" is essentially "null"
             )
         })
         .bind(("127.0.0.1", 8080))? // "?" means "return error if this fails, else unwrap"
-        // todo print message once the server starts
         .run()
         .await
 }

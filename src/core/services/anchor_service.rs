@@ -1,4 +1,4 @@
-use crate::{repositories::anchor_repository::AnchorRepository, models::anchor::Anchor};
+use crate::core::{repositories::anchor_repository::AnchorRepository, models::anchor::Anchor};
 
 pub struct AnchorService {
     /// "dyn AnchorRepository" means "something that implements the 
@@ -59,8 +59,6 @@ impl AnchorService {
 
 #[cfg(test)]
 pub mod tests {
-    use crate::models::anchor::Anchor;
-
     use super::*;
 
     use mockall::mock;

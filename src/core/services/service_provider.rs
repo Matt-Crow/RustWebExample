@@ -1,6 +1,9 @@
 use std::sync::Mutex;
 
-use crate::repositories::{anchor_repository::AnchorRepository, in_memory_anchor_repository::InMemoryAnchorRepository};
+use crate::core::repositories::{
+    anchor_repository::AnchorRepository, 
+    in_memory_anchor_repository::InMemoryAnchorRepository
+};
 
 use super::anchor_service::AnchorService;
 

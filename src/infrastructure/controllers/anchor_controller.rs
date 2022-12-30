@@ -13,7 +13,7 @@ use actix_web::{
     error
 };
 
-use crate::{
+use crate::core::{
     models::anchor::Anchor, 
     services::service_provider::ServiceProvider
 };

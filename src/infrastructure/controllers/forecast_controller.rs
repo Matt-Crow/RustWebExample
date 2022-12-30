@@ -1,6 +1,6 @@
 use actix_web::{web, Responder};
 use serde::{Serialize, Deserialize};
-use crate::services::forecast_service::{self, get_forecast};
+use crate::core::services::forecast_service::{self, get_forecast};
 
 // Enables JSON conversion
 #[derive(Deserialize)]

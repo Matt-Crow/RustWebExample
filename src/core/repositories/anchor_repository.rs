@@ -1,4 +1,4 @@
-use crate::models::anchor::Anchor;
+use crate::core::models::anchor::Anchor;
 
 /// designates something as an interface into a backing store containing anchors
 pub trait AnchorRepository {

@@ -1,6 +1,6 @@
 use std::{sync::Mutex, collections::HashMap};
 
-use crate::models::anchor::Anchor;
+use crate::core::models::anchor::Anchor;
 
 use super::anchor_repository::AnchorRepository;
 

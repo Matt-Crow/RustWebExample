@@ -1,7 +1,7 @@
 use core::time;
 use std::thread;
 
-use crate::models::forecast::Forecast;
+use crate::core::models::forecast::Forecast;
 
 /// converts from farenheight to celsius
 pub fn to_celsius(farenheight: f32) -> f32 {
