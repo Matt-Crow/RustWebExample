@@ -3,7 +3,9 @@ use tokio::net::TcpListener;
 
 pub fn set_up_tcp_listener_on(port: u16) {
     tokio::spawn(async move {
-        let listener = TcpListener::bind(format!("127.0.0.1:{}", port)).await;
+        let address = format!("127.0.0.1:{}", port);
+        let listener = TcpListener::bind(&address).await;
+        println!("Set up TCP listener on {}", address);
 
         match listener {
             Ok(listening) => {

@@ -10,6 +10,7 @@ actix-web = "4"
 serde = { version = "1.0", features = ["derive"] }
 tiberius = "0.11.3"
 tokio = { version = "1.23.0", features = ["full"] }
+reqwest = "0.11.13"
 
 # https://github.com/prisma/tiberius/issues/145#issuecomment-829044670
 [dependencies.tokio-util]

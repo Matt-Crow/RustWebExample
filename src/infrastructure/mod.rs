@@ -2,3 +2,4 @@
 // code strictly related to a specific database provider or external service.
 pub mod controllers;
 pub mod database;
+pub mod http_client;

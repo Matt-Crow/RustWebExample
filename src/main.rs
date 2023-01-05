@@ -10,10 +10,13 @@ use actix_web::{
 };
 use crate::{
     core::services::service_provider::ServiceProvider,
-    infrastructure::{controllers::{
-        forecast_controller::configure_forecast_controller_routes, 
-        anchor_controller::configure_anchor_controller_routes
-    }, database::port_demo::set_up_tcp_listener_on},  
+    infrastructure::{
+        controllers::{
+            forecast_controller::configure_forecast_controller_routes, 
+            anchor_controller::configure_anchor_controller_routes
+        }, 
+        database::port_demo::set_up_tcp_listener_on, http_client
+    },  
     infrastructure::database::connection::{
         create_client,
         create_config_from_env
@@ -22,11 +25,19 @@ use crate::{
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> { // "()" is essentially "null"
-    set_up_tcp_listener_on(1433); // this shows MSSQL is not listening on that port
+    let test_tcp = !true;
+
+    // testing to see if this can make outbound connections
+    match http_client::get("http://google.com").await {
+        Ok(_) => println!("Successfully made a request to Google"),
+        Err(err) => panic!("Failed to make a request to Google: {}", err) 
+    };
+
+    if test_tcp {
+        set_up_tcp_listener_on(1433); // this shows MSSQL is not listening on that port
+    }
 
     println!("Starting web server...");
-
-
 
     let config = match create_config_from_env() {
         Ok(c) => c,
@@ -38,8 +49,6 @@ async fn main() -> std::io::Result<()> { // "()" is essentially "null"
         Ok(x) => println!("Yay: {:#?}", x),
         Err(x) => println!("Boo: {:#?}", x) // connection refused. TCP might be disabled
     }
-
-
 
     let sp = web::Data::new(ServiceProvider::default());
 
