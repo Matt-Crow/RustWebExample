@@ -1,3 +1,6 @@
+// The Rust ecosystem does not appear to support any standard Dependency
+// Injection framework, but once one arises, this module can be replaced.
+
 use std::sync::Mutex;
 
 use crate::core::repositories::{
@@ -7,8 +10,10 @@ use crate::core::repositories::{
 
 use super::anchor_service::AnchorService;
 
+// one weakness of this implementation of DI is how it must know all the 
+// services it must provide, unlike the .NET DI subsystem, which uses generics
 pub struct ServiceProvider {
-    anchor_service: Mutex<AnchorService>
+    anchor_service: Mutex<AnchorService> // wrap services in a mutex for safety
 }
 
 impl ServiceProvider {

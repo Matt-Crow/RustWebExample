@@ -17,7 +17,7 @@ struct Celsius {
 
 /// Sets up routing for the /api/v1/forecast endpoints.
 /// Note the mutable borrow of the `ServiceConfig`.
-pub fn configure_forecast_controller_routes(cfg: &mut web::ServiceConfig) {
+pub fn configure_forecast_routes(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/forecast")
             .route("/to-celsius/{farenheight}", web::get().to(to_celsius_handler))

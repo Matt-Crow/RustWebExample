@@ -20,7 +20,7 @@ use crate::core::{
 
 /// Registers the various anchor-related routes, allowing the app to handler
 /// requests to these endpoints.
-pub fn configure_anchor_controller_routes(cfg: &mut web::ServiceConfig) {
+pub fn configure_anchor_routes(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::resource("/anchors")
             .name("news_anchor")

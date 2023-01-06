@@ -12,8 +12,8 @@ use crate::{
     core::services::service_provider::ServiceProvider,
     infrastructure::{
         controllers::{
-            forecast_controller::configure_forecast_controller_routes, 
-            anchor_controller::configure_anchor_controller_routes
+            forecast_controller::configure_forecast_routes, 
+            anchor_controller::configure_anchor_routes
         }, 
         database::port_demo::set_up_tcp_listener_on, http_client
     },  
@@ -25,7 +25,8 @@ use crate::{
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> { // "()" is essentially "null"
-    let test_tcp = !true;
+    
+
 
     // testing to see if this can make outbound connections
     match http_client::get("http://google.com").await {
@@ -33,11 +34,7 @@ async fn main() -> std::io::Result<()> { // "()" is essentially "null"
         Err(err) => panic!("Failed to make a request to Google: {}", err) 
     };
 
-    if test_tcp {
-        set_up_tcp_listener_on(1433); // this shows MSSQL is not listening on that port
-    }
-
-    println!("Starting web server...");
+    set_up_tcp_listener_on(1433); // this shows MSSQL is not listening on that port
 
     let config = match create_config_from_env() {
         Ok(c) => c,
@@ -50,15 +47,18 @@ async fn main() -> std::io::Result<()> { // "()" is essentially "null"
         Err(x) => println!("Boo: {:#?}", x) // connection refused. TCP might be disabled
     }
 
+    // The Rust ecosystem does not appear to have a good Dependency Injection
+    // framework, so we have to bundle together the service providers ourselves.
     let sp = web::Data::new(ServiceProvider::default());
 
+    println!("Starting web server...");
+    
     HttpServer::new(move || {
         App::new()
-            .app_data(sp.clone())
-            .configure(configure_forecast_controller_routes)
+            .app_data(sp.clone()) // app data is thread-safe
             .service(web::scope("/api/v1")
-                .configure(configure_forecast_controller_routes)
-                .configure(configure_anchor_controller_routes)
+                .configure(configure_forecast_routes)
+                .configure(configure_anchor_routes)
             )
         })
         .bind(("127.0.0.1", 8080))? // "?" means "return error if this fails, else unwrap"
