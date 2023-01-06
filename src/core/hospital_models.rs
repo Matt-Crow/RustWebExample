@@ -22,7 +22,12 @@ impl Department { // define methods on the Department
                 name: name.to_string()
             })
         } else {
-            let h = Hospital { id: Some(1), name: name.to_string(), patients: Vec::new() };
+            let next_id = self.hospitals.len() + 1;
+            let h = Hospital { 
+                id: Some(next_id.try_into().unwrap()), 
+                name: name.to_string(), 
+                patients: Vec::new() 
+            };
             self.hospitals.insert(h.name.to_string(), h.clone()); 
             Ok(h)
         }
@@ -38,6 +43,18 @@ impl Default for Department {
 #[derive(Debug)]
 pub struct InvalidHospitalName {
     name: String
+}
+
+impl InvalidHospitalName {
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.to_string()
+        }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
 }
 
 #[derive(Serialize, Deserialize)] // allows this to be converted to & from JSON
@@ -97,5 +114,30 @@ pub mod tests {
 
         assert!(first_hospital_with_name.is_ok());
         assert!(second_hospital_with_name.is_err());
+    }
+
+    #[test]
+    fn department_add_hospital_sets_id() {
+        let mut sut = Department::new();
+
+        let result = sut.add_hospital("Foo");
+
+        assert!(result.is_ok());
+        assert!(result.unwrap().id.is_some());
+    }
+
+    #[test]
+    fn department_add_hospital_uses_unique_id() {
+        let mut sut = Department::new();
+
+        let first_hospital = sut.add_hospital("Foo");
+        let second_hospital = sut.add_hospital("Bar");
+
+        assert!(first_hospital.is_ok());
+        assert!(second_hospital.is_ok());
+        assert_ne!(
+            first_hospital.unwrap().id,
+            second_hospital.unwrap().id
+        );
     }
 }

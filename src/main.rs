@@ -15,7 +15,8 @@ use crate::{
             forecast_controller::configure_forecast_routes, 
             anchor_controller::configure_anchor_routes
         }, 
-        database::port_demo::set_up_tcp_listener_on, http_client
+        database::port_demo::set_up_tcp_listener_on, http_client,
+        routes::configure_hospital_routes
     },  
     infrastructure::database::connection::{
         create_client,
@@ -56,6 +57,7 @@ async fn main() -> std::io::Result<()> { // "()" is essentially "null"
             .service(web::scope("/api/v1")
                 .configure(configure_forecast_routes)
                 .configure(configure_anchor_routes)
+                .configure(configure_hospital_routes)
             )
         })
         .bind(("127.0.0.1", 8080))? // "?" means "return error if this fails, else unwrap"

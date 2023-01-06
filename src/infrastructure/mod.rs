@@ -3,3 +3,4 @@
 pub mod controllers;
 pub mod database;
 pub mod http_client;
+pub mod routes;
