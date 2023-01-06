@@ -11,11 +11,9 @@ use actix_web::{
 use crate::{
     core::services::service_provider::ServiceProvider,
     infrastructure::{
-        controllers::{
-            forecast_controller::configure_forecast_routes, 
-            anchor_controller::configure_anchor_routes
-        }, 
-        database::port_demo::set_up_tcp_listener_on, http_client
+        anchor_routes::configure_anchor_routes, 
+        database::port_demo::set_up_tcp_listener_on, 
+        http_client
     },  
     infrastructure::database::connection::{
         create_client,
@@ -56,8 +54,7 @@ async fn main() -> std::io::Result<()> { // "()" is essentially "null"
     HttpServer::new(move || {
         App::new()
             .app_data(sp.clone()) // app data is thread-safe
-            .service(web::scope("/api/v1")
-                .configure(configure_forecast_routes)
+            .service(web::scope("/api/v1") // register API routes
                 .configure(configure_anchor_routes)
             )
         })

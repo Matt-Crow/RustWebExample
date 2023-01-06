@@ -2,13 +2,10 @@ use std::fmt::Display;
 
 use serde::{Serialize, Deserialize};
 
-
-
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Anchor {
     id: Option<u32>,
     name: String,
-    accuracy: Option<f32>,
 
     #[serde(default = "return_0")]
     years_employed: u8
@@ -24,7 +21,6 @@ impl Anchor {
         Anchor {
             id: None,
             name: String::from(name),
-            accuracy: None,
             years_employed: 0
         }
     }
@@ -37,20 +33,8 @@ impl Anchor {
         Anchor {
             id: self.id,
             name: String::from(name),
-            accuracy: self.accuracy,
             ..*self // copy other properties from this, calling copy() on any
                     // that derive from Copy
-        }
-    }
-
-    /// returns a copy of this news anchor, except with the given reporting 
-    /// accuracy
-    pub fn with_accuracy(&self, accuracy: f32) -> Self {
-        Anchor {
-            id: self.id,
-            name: self.name.clone(),
-            accuracy: Some(accuracy),
-            ..*self
         }
     }
 
@@ -59,7 +43,6 @@ impl Anchor {
         Anchor {
             id: self.id,
             name: self.name.clone(),
-            accuracy: self.accuracy,
             years_employed
         }
     }
@@ -69,7 +52,6 @@ impl Anchor {
         Anchor { 
             id: Some(id), 
             name: self.name.clone(), 
-            accuracy: self.accuracy, 
             ..*self
         }
     }
@@ -80,15 +62,9 @@ impl Anchor {
             id = Some(new_id);
         }
 
-        let mut accuracy = first.accuracy;
-        if let Some(new_accuracy) = second.accuracy {
-            accuracy = Some(new_accuracy);
-        }
-
         Anchor {
             id,
             name: second.name.clone(),
-            accuracy,
             years_employed: second.years_employed
         }
     }
@@ -96,11 +72,6 @@ impl Anchor {
     /// returns an immutable reference to this news anchor's name
     pub fn name(&self) -> &str {
         &self.name
-    }
-
-    /// returns an immutable reference to this news anchor's reporting accuracy
-    pub fn accuracy(&self) -> Option<f32> {
-        self.accuracy
     }
 
     /// returns how many years this news anchor has been employed
@@ -118,8 +89,7 @@ impl Clone for Anchor {
     fn clone(&self) -> Self {
         Self { 
             id: self.id, 
-            name: self.name.clone(), 
-            accuracy: self.accuracy, 
+            name: self.name.clone(),
             years_employed: self.years_employed 
         }
     }
@@ -127,16 +97,8 @@ impl Clone for Anchor {
 
 impl Display for Anchor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.accuracy {
-            Some(accuracy) => {
-                write!(f, "{}, a news anchor with {:.0}% accuracy over {} years",
-                    self.name, accuracy * 100.0, self.years_employed)
-            }
-            None => {
-                write!(f, "{}, a news anchor who hasn't reported despite being hired for {} years",
-                    self.name, self.years_employed)
-            }
-        }
+        write!(f, "{}, a news anchor with {} years of experience", 
+            self.name, self.years_employed)
     }
 }
 
