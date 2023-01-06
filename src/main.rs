@@ -9,7 +9,7 @@ use actix_web::{
     web
 };
 use crate::{
-    core::services::service_provider::ServiceProvider,
+    core::{services::service_provider::ServiceProvider},
     infrastructure::{
         controllers::{
             forecast_controller::configure_forecast_routes, 
@@ -25,9 +25,6 @@ use crate::{
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> { // "()" is essentially "null"
-    
-
-
     // testing to see if this can make outbound connections
     match http_client::get("http://google.com").await {
         Ok(_) => println!("Successfully made a request to Google"),

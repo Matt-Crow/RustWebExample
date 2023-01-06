@@ -2,5 +2,6 @@
 // provide any external implementation details, such as which database to use or
 // third party services
 pub mod models;
+pub mod hospital_models;
 pub mod repositories;
 pub mod services;
