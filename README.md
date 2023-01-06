@@ -28,9 +28,6 @@ An example web application using Rust for the backend.
 - GET `localhost:8080/api/v1/anchors/{id}`
 - DELETE `localhost:8080/api/v1/anchors/{id}`
 - PUT `localhost:8080/api/v1/anchors/{id}`
-- GET `localhost:8080/api/v1/forecast/{location}/{days}`
-- GET `localhost:8080/api/v1/forecast/to-farenheight/{celsius}`
-- GET `localhost:8080/api/v1/forecast/to-celsius/{farenheight}`
 
 ## Helpful links
 

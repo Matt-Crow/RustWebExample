@@ -10,40 +10,11 @@ use actix_web::{
 };
 use crate::{
     core::services::service_provider::ServiceProvider,
-    infrastructure::{
-        anchor_routes::configure_anchor_routes, 
-        database::port_demo::set_up_tcp_listener_on, 
-        http_client
-    },  
-    infrastructure::database::connection::{
-        create_client,
-        create_config_from_env
-    }
+    infrastructure::anchor_routes::configure_anchor_routes
 };
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> { // "()" is essentially "null"
-    
-
-
-    // testing to see if this can make outbound connections
-    match http_client::get("http://google.com").await {
-        Ok(_) => println!("Successfully made a request to Google"),
-        Err(err) => panic!("Failed to make a request to Google: {}", err) 
-    };
-
-    set_up_tcp_listener_on(1433); // this shows MSSQL is not listening on that port
-
-    let config = match create_config_from_env() {
-        Ok(c) => c,
-        Err(error) => panic!("Error: {}", error)
-    };
-    println!("Config: {:#?}", config);
-
-    match create_client(config).await {
-        Ok(x) => println!("Yay: {:#?}", x),
-        Err(x) => println!("Boo: {:#?}", x) // connection refused. TCP might be disabled
-    }
 
     // The Rust ecosystem does not appear to have a good Dependency Injection
     // framework, so we have to bundle together the service providers ourselves.

@@ -59,6 +59,7 @@ async fn get_anchor_by_id(
 ) -> actix_web::Result<Json<Anchor>> {
     let mutex = service_provider.anchors();
     let getter = mutex.lock().unwrap();
+    
     match getter.get_by_id(*id) {
         Ok(maybe_anchor) => match maybe_anchor {
             Some(anchor) => Ok(Json(anchor)),
@@ -71,6 +72,7 @@ async fn get_anchor_by_id(
 async fn post_anchor(anchor: Json<Anchor>, service_provider: web::Data<ServiceProvider>) -> actix_web::Result<Json<Anchor>> {
     let mutex = service_provider.anchors();
     let mut creator = mutex.lock().unwrap();
+
     match creator.create(&anchor) {
         Ok(data) => Ok(Json(data)),
         Err(msg) => Err(error::ErrorBadRequest(msg))
@@ -80,6 +82,7 @@ async fn post_anchor(anchor: Json<Anchor>, service_provider: web::Data<ServicePr
 async fn put_anchor(_id: web::Path<u32>, anchor: Json<Anchor>, service_provider: web::Data<ServiceProvider>) -> actix_web::Result<Json<Anchor>> {
     let mutex = service_provider.anchors();
     let mut updater = mutex.lock().unwrap();
+
     match updater.update(&anchor) {
         Ok(data) => Ok(Json(data)),
         Err(msg) => Err(error::ErrorBadRequest(msg))
@@ -89,6 +92,7 @@ async fn put_anchor(_id: web::Path<u32>, anchor: Json<Anchor>, service_provider:
 async fn delete_anchor(id: web::Path<u32>, service_provider: web::Data<ServiceProvider>) -> impl Responder {
     let mutex = service_provider.anchors();
     let mut deletor = mutex.lock().unwrap();
+
     match deletor.delete_anchor(*id) {
         Ok(_) => HttpResponse::NoContent().body(""),
         Err(msg) => HttpResponse::BadRequest().body(msg)
