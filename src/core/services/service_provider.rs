@@ -3,23 +3,25 @@
 
 use std::sync::Mutex;
 
-use crate::core::repositories::{
+use crate::core::{repositories::{
     anchor_repository::AnchorRepository, 
     in_memory_anchor_repository::InMemoryAnchorRepository
-};
+}, hospital_services::HospitalService};
 
 use super::anchor_service::AnchorService;
 
 // one weakness of this implementation of DI is how it must know all the 
 // services it must provide, unlike the .NET DI subsystem, which uses generics
 pub struct ServiceProvider {
-    anchor_service: Mutex<AnchorService> // wrap services in a mutex for safety
+    anchor_service: Mutex<AnchorService>, // wrap services in a mutex for safety
+    hospital_service: Mutex<HospitalService>
 }
 
 impl ServiceProvider {
     pub fn new(anchor_repository: impl AnchorRepository + Send + Sync + 'static) -> Self {
         Self { 
-            anchor_service: Mutex::new(AnchorService::new(anchor_repository))
+            anchor_service: Mutex::new(AnchorService::new(anchor_repository)),
+            hospital_service: Mutex::new(HospitalService::new())
         }
     }
 
@@ -29,6 +31,10 @@ impl ServiceProvider {
 
     pub fn anchors(&self) -> &Mutex<AnchorService> {
         &self.anchor_service
+    }
+
+    pub fn hospitals(&self) -> &Mutex<HospitalService> {
+        &self.hospital_service
     }
 }
 
