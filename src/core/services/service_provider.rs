@@ -6,7 +6,7 @@ use std::sync::Mutex;
 use crate::core::{repositories::{
     anchor_repository::AnchorRepository, 
     in_memory_anchor_repository::InMemoryAnchorRepository
-}, hospital_services::HospitalService};
+}, hospital_services::HospitalService, hospital_repository::{HospitalRepository, InMemoryHospitalRepository}};
 
 use super::anchor_service::AnchorService;
 
@@ -18,15 +18,21 @@ pub struct ServiceProvider {
 }
 
 impl ServiceProvider {
-    pub fn new(anchor_repository: impl AnchorRepository + Send + Sync + 'static) -> Self {
+    pub fn new(
+        anchor_repository: impl AnchorRepository + Send + Sync + 'static,
+        hospital_repository: impl HospitalRepository + Send + Sync + 'static
+    ) -> Self {
         Self { 
             anchor_service: Mutex::new(AnchorService::new(anchor_repository)),
-            hospital_service: Mutex::new(HospitalService::new())
+            hospital_service: Mutex::new(HospitalService::new(hospital_repository))
         }
     }
 
     pub fn default() -> Self {
-        Self::new(InMemoryAnchorRepository::new())
+        Self::new(
+            InMemoryAnchorRepository::new(),
+            InMemoryHospitalRepository::empty()
+        )
     }
 
     pub fn anchors(&self) -> &Mutex<AnchorService> {

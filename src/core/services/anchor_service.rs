@@ -38,10 +38,6 @@ impl AnchorService {
         }
     }
 
-    pub fn get_all(&self) -> Result<Vec<Anchor>, String> {
-        self.repository.get_all()
-    }
-
     pub fn get_by_id(&self, id: u32) -> Result<Option<Anchor>, String> {
         self.repository.get_by_id(id)
     }
@@ -70,7 +66,6 @@ pub mod tests {
 
         impl AnchorRepository for Dummy {
             fn store(&mut self, anchor: &Anchor) -> Result<Anchor, String>;
-            fn get_all(&self) -> Result<Vec<Anchor>, String>;
             fn get_by_id(&self, id: u32) -> Result<Option<Anchor>, String>;
             fn remove_by_id(&mut self, id: u32) -> Result<bool, String>;
         }
@@ -134,20 +129,6 @@ pub mod tests {
         let mut sut = AnchorService::new(mock);
 
         let result = sut.update(&Anchor::new("Baz Qux").with_id(1));
-
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn get_all_forwards_to_repository() {
-        let mut mock = MockDummy::new();
-        mock
-            .expect_get_all()
-            .once()
-            .returning(|| Ok(Vec::new()));
-        let sut = AnchorService::new(mock);
-
-        let result =sut.get_all();
 
         assert!(result.is_ok());
     }

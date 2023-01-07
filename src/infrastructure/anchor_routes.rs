@@ -24,7 +24,6 @@ pub fn configure_anchor_routes(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::resource("/anchors")
             .name("news_anchor")
-            .route(web::get().to(get_all_anchors))
             .route(web::post().to(post_anchor))
     );
     cfg.service(
@@ -34,23 +33,6 @@ pub fn configure_anchor_routes(cfg: &mut web::ServiceConfig) {
             .route(web::put().to(put_anchor))
             .route(web::delete().to(delete_anchor))
     );
-}
-
-async fn get_all_anchors(
-    // web::Data<T> grabs shared state registered during app creation
-    service_provider: web::Data<ServiceProvider>
-) -> actix_web::Result<Json<Vec<Anchor>>> {
-    // Actix Web has its own Result<T, E> type, not to be confused with Rust's
-
-    // since the app state is shared across threads, we must grab the mutex to
-    // use it
-    let mutex = service_provider.anchors();
-    let anchors = mutex.lock().unwrap();
-
-    match anchors.get_all() {
-        Ok(data) => Ok(Json(data)),
-        Err(msg) => Err(error::ErrorInternalServerError(msg)) // use error helper functions to create actix errors
-    }
 }
 
 async fn get_anchor_by_id(

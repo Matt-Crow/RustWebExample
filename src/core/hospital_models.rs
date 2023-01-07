@@ -64,6 +64,24 @@ pub struct Hospital {
     patients: Vec<Patient>
 }
 
+impl Hospital {
+    pub fn new(name: &str) -> Self {
+        Self {
+            id: None,
+            name: name.to_owned(),
+            patients: Vec::new()
+        }
+    }
+
+    pub fn with_id(&self, id: u32) -> Self {
+        Self {
+            id: Some(id),
+            name: self.name.to_owned(),
+            patients: self.patients.clone()
+        }
+    }
+}
+
 impl Clone for Hospital {
     fn clone(&self) -> Self {
         Self {
@@ -71,6 +89,12 @@ impl Clone for Hospital {
             name: self.name.to_string(),
             patients: self.patients.iter().map(|p| p.to_owned()).collect()
         }
+    }
+}
+
+impl PartialEq for Hospital {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
     }
 }
 

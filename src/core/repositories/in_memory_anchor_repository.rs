@@ -37,10 +37,6 @@ impl AnchorRepository for InMemoryAnchorRepository {
         Ok(stored.clone())
     }
 
-    fn get_all(&self) -> Result<Vec<Anchor>, String> {
-        Ok(self.stored.lock().unwrap().values().cloned().collect())
-    }
-
     fn get_by_id(&self, id: u32) -> Result<Option<Anchor>, String> {
         let binding = self.stored.lock().unwrap();
         let found = binding.get(&id);
@@ -112,34 +108,6 @@ mod tests {
 
         assert!(stored.is_some());
         assert_eq!(stored.unwrap().name(), new_anchor.name());
-
-        Ok(())
-    }
-
-    #[test]
-    fn get_all_given_no_anchors_has_zero_length() -> Result<(), String> {
-        let sut = InMemoryAnchorRepository::new();
-
-        let result = sut.get_all()?;
-
-        assert!(result.is_empty());
-
-        Ok(())
-    }
-
-    #[test]
-    fn get_all_given_stored_anchors_returns_them() -> Result<(), String> {
-        let anchors = vec![
-            Anchor::new("Foo Bar").with_id(1),
-            Anchor::new("Baz Qux").with_id(2)
-        ];
-        let mut sut = InMemoryAnchorRepository::new();
-        sut.store(&anchors[0])?;
-        sut.store(&anchors[1])?;
-        let result = sut.get_all()?;
-
-        assert!(result.contains(&anchors[0]));
-        assert!(result.contains(&anchors[1]));
 
         Ok(())
     }

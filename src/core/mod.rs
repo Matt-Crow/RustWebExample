@@ -3,6 +3,7 @@
 // third party services
 pub mod models;
 pub mod hospital_models;
+pub mod hospital_repository;
 pub mod hospital_services;
 pub mod repositories;
 pub mod services;

@@ -12,11 +12,18 @@ pub fn configure_hospital_routes(cfg: &mut ServiceConfig) {
     );
 }
 
+// todo only auth users can see patients
 async fn get_all_hospitals(
+    // web::Data grabs shared state registered during app creation
     services: web::Data<ServiceProvider>
 ) -> actix_web::Result<Json<Vec<Hospital>>> {
+    // actix web has its own Result type, not to be confused with Rust's
+    // since the app state is shared across threads, need mutex to use it
     let mutex = services.hospitals();
     let getter = mutex.lock().unwrap();
 
-    Err(ErrorInternalServerError("err"))
+    match getter.get_all_hospitals() {
+        Ok(hospitals) => Ok(Json(hospitals)),
+        Err(error) => Err(ErrorInternalServerError(error))
+    }
 }
