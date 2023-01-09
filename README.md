@@ -25,8 +25,8 @@ An example web application using Rust for the backend.
 
 - GET `/api/v1/hospitals`
 - GET `/api/v1/hospitals/{name}`
+- POST `/api/v1/hospitals/{name}` Patient
 
-- POST `localhost:8080/api/v1/anchors`
 - DELETE `localhost:8080/api/v1/anchors/{id}`
 - PUT `localhost:8080/api/v1/anchors/{id}`
 

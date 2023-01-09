@@ -22,26 +22,11 @@ use crate::core::{
 /// requests to these endpoints.
 pub fn configure_anchor_routes(cfg: &mut web::ServiceConfig) {
     cfg.service(
-        web::resource("/anchors")
-            .name("news_anchor")
-            .route(web::post().to(post_anchor))
-    );
-    cfg.service(
         web::resource("/anchors/{id}")
             .name("news_anchor")
             .route(web::put().to(put_anchor))
             .route(web::delete().to(delete_anchor))
     );
-}
-
-async fn post_anchor(anchor: Json<Anchor>, service_provider: web::Data<ServiceProvider>) -> actix_web::Result<Json<Anchor>> {
-    let mutex = service_provider.anchors();
-    let mut creator = mutex.lock().unwrap();
-
-    match creator.create(&anchor) {
-        Ok(data) => Ok(Json(data)),
-        Err(msg) => Err(error::ErrorBadRequest(msg))
-    }
 }
 
 async fn put_anchor(_id: web::Path<u32>, anchor: Json<Anchor>, service_provider: web::Data<ServiceProvider>) -> actix_web::Result<Json<Anchor>> {

@@ -18,13 +18,6 @@ impl AnchorService {
         }
     }
 
-    pub fn create(&mut self, anchor: &Anchor) -> Result<Anchor, String> {
-        match anchor.id() {
-            Some(_) => Err("Cannot create Anchor who already has an ID".to_string()),
-            None => self.repository.store(anchor)
-        }
-    }
-
     pub fn update(&mut self, anchor: &Anchor) -> Result<Anchor, String> {
         match anchor.id() {
             Some(id) => {
@@ -65,29 +58,6 @@ pub mod tests {
             fn get_by_id(&self, id: u32) -> Result<Option<Anchor>, String>;
             fn remove_by_id(&mut self, id: u32) -> Result<bool, String>;
         }
-    }
-
-    #[test]
-    fn create_given_anchor_with_id_returns_error() {
-        let mock = MockDummy::new();
-        let mut sut = AnchorService::new(mock);
-
-        let result = sut.create(&Anchor::new("Foo Bar").with_id(1));
-
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn create_given_anchor_without_id_forwards_to_repository() {
-        let mut mock = MockDummy::new();
-        mock
-            .expect_store()
-            .returning(|x| Ok(x.clone()));
-        let mut sut = AnchorService::new(mock);
-
-        let result = sut.create(&Anchor::new("Foo Bar"));
-
-        assert!(result.is_ok());
     }
 
     #[test]

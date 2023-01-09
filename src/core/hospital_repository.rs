@@ -2,7 +2,7 @@ use std::{fmt::Display, sync::Mutex, collections::HashMap};
 
 use serde::{Serialize, Deserialize};
 
-use super::hospital_models::Hospital;
+use super::hospital_models::{Hospital, Patient};
 
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -33,7 +33,11 @@ pub trait HospitalRepository {
 
     /// returns a single hospital according to the given criteria, or None if no
     /// hospital matches, or returns an error when applicable
-    fn get_hospital(&self, by: &By) -> Result<Option<Hospital>, RepositoryError>; 
+    fn get_hospital(&self, by: &By) -> Result<Option<Hospital>, RepositoryError>;
+
+    /// adds the given patient to a hospital, if able. Returns an error if the
+    /// hospital is not already stored
+    fn add_patient_to_hospital(&mut self, by: &By, patient: Patient) -> Result<Hospital, RepositoryError>;
 }
 
 pub enum By {
@@ -41,8 +45,18 @@ pub enum By {
     Name(String)
 }
 
+impl Display for By {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            By::Id(id) => write!(f, "Hospital with id {}", id),
+            By::Name(name) => write!(f, "Hospital with name {}", name)
+        }
+    }
+}
+
 pub struct InMemoryHospitalRepository {
-    next_id: Mutex<u32>,
+    next_hospital_id: Mutex<u32>,
+    next_patient_id: Mutex<u32>,
     hospitals: Mutex<HashMap<u32, Hospital>>,
     name_to_id: Mutex<HashMap<String, u32>>
 }
@@ -50,7 +64,8 @@ pub struct InMemoryHospitalRepository {
 impl InMemoryHospitalRepository {
     pub fn containing(hospitals: &Vec<Hospital>) -> Self {
         let mut repo = Self {
-            next_id: Mutex::new(1),
+            next_hospital_id: Mutex::new(1),
+            next_patient_id: Mutex::new(1),
             hospitals: Mutex::new(HashMap::new()),
             name_to_id: Mutex::new(HashMap::new())
         };
@@ -72,7 +87,7 @@ impl InMemoryHospitalRepository {
                 hospital.to_owned()
             },
             None => {
-                let id_mutex = self.next_id.lock();
+                let id_mutex = self.next_hospital_id.lock();
                 let mut next_id = id_mutex.unwrap();
                 let temp = hospital.with_id(*next_id);
                 *next_id += 1;
@@ -127,10 +142,35 @@ impl HospitalRepository for InMemoryHospitalRepository {
             }
         }
     }
+
+    fn add_patient_to_hospital(&mut self, by: &By, patient: Patient) -> Result<Hospital, RepositoryError>{
+        let maybe_hospital = self.get_hospital(by)?;
+        if maybe_hospital.is_none() {
+            return Err(RepositoryError::new(&format!("Invalid selector: {}", by)));
+        }
+        let mut hospital = maybe_hospital.unwrap();
+
+        let add_me = match patient.id() {
+            Some(_) => patient,
+            None => {
+                let mutex = self.next_patient_id.lock();
+                let mut next_id = mutex.unwrap();
+                let temp = patient.with_id(*next_id);
+                *next_id += 1;
+                temp
+            }
+        };
+        hospital.add_patient(add_me);
+        self.insert(&hospital);
+
+        Ok(hospital)
+    }
 }
 
 #[cfg(test)]
 pub mod tests {
+    use crate::core::hospital_models::Patient;
+
     use super::*;
 
     #[test]
@@ -209,5 +249,44 @@ pub mod tests {
         let ok_result = result.unwrap();
         assert!(ok_result.is_some());
         assert_eq!(expected, ok_result.unwrap());
+    }
+
+    #[test]
+    fn add_patient_to_hospital_given_invalid_selector_returns_error() {
+        let selector = By::Id(1);
+        let patient = Patient::new("Foo");
+        let mut sut = InMemoryHospitalRepository::empty();
+
+        let result = sut.add_patient_to_hospital(&selector, patient);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn add_patient_to_hospital_given_valid_selector_updates_hospital() {
+        let name = "Foo";
+        let hospital = Hospital::new(name);
+        let patient = Patient::new("Bar").with_id(1);
+        let selector = By::Name(name.to_owned());
+        let mut sut = InMemoryHospitalRepository::containing(&vec![hospital]);
+
+        let result = sut.add_patient_to_hospital(&selector, patient.clone());
+
+        assert!(result.is_ok());
+        assert!(result.unwrap().has_patient(&patient));
+    }
+
+    #[test]
+    fn add_patient_to_hospital_sets_patient_id() {
+        let name = "Foo";
+        let hospital = Hospital::new(name);
+        let patient = Patient::new("Bar");
+        let selector = By::Name(name.to_owned());
+        let mut sut = InMemoryHospitalRepository::containing(&vec![hospital]);
+
+        let result = sut.add_patient_to_hospital(&selector, patient.clone());
+
+        assert!(result.is_ok());
+        assert!(result.unwrap().patients().iter().all(|p| p.id().is_some()));
     }
 }

@@ -90,6 +90,18 @@ impl Hospital {
     pub fn name(&self) -> String {
         self.name.to_owned()
     }
+
+    pub fn patients(&self) -> Vec<Patient> {
+        self.patients.to_vec()
+    }
+
+    pub fn add_patient(&mut self, patient: Patient) {
+        self.patients.push(patient);
+    }
+
+    pub fn has_patient(&self, patient: &Patient) -> bool {
+        self.patients.contains(patient)
+    }
 }
 
 impl Clone for Hospital {
@@ -113,6 +125,32 @@ impl PartialEq for Hospital {
 pub struct Patient {
     id: Option<u32>,
     name: String
+}
+
+impl PartialEq for Patient {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Patient {
+    pub fn new(name: &str) -> Self {
+        Self {
+            id: None,
+            name: name.to_owned()
+        }
+    }
+
+    pub fn with_id(&self, id: u32) -> Self {
+        Self {
+            id: Some(id),
+            name: self.name.to_owned()
+        }
+    }
+
+    pub fn id(&self) -> Option<u32> {
+        self.id
+    }
 }
 
 impl Clone for Patient {
