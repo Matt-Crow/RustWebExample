@@ -38,6 +38,10 @@ pub trait HospitalRepository {
     /// adds the given patient to a hospital, if able. Returns an error if the
     /// hospital is not already stored
     fn add_patient_to_hospital(&mut self, by: &By, patient: Patient) -> Result<Hospital, RepositoryError>;
+
+    /// removes the given patient from the given hospital. Returns an error if
+    /// the hospital is not stored. Note this method should be idempotent.
+    fn remove_patient_from_hospital(&mut self, patient_id: u32, hospital_selector: &By) -> Result<Hospital, RepositoryError>;
 }
 
 pub enum By {
@@ -75,6 +79,10 @@ impl InMemoryHospitalRepository {
         }
 
         repo
+    }
+
+    pub fn containing_single(hospital: Hospital) -> Self {
+        Self::containing(&vec![hospital])
     }
 
     pub fn empty() -> Self {
@@ -164,6 +172,19 @@ impl HospitalRepository for InMemoryHospitalRepository {
         self.insert(&hospital);
 
         Ok(hospital)
+    }
+
+    fn remove_patient_from_hospital(&mut self, patient_id: u32, hospital_selector: &By) -> Result<Hospital, RepositoryError> {
+        let hospital = self.get_hospital(hospital_selector)?;
+
+        match hospital {
+            Some(mut h) => {
+                h.remove_patient_by_id(patient_id);
+                self.insert(&h);
+                Ok(h)
+            },
+            None => Err(RepositoryError::new(&format!("Invalid selector: {}", hospital_selector)))
+        }
     }
 }
 
@@ -288,5 +309,45 @@ pub mod tests {
 
         assert!(result.is_ok());
         assert!(result.unwrap().patients().iter().all(|p| p.id().is_some()));
+    }
+
+    #[test]
+    fn remove_patient_from_hospital_given_invalid_hospital_returns_error() {
+        let mut sut = InMemoryHospitalRepository::empty();
+
+        let result = sut.remove_patient_from_hospital(1, &By::Id(1));
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn remove_patient_from_hospital_when_patient_not_admitted_is_ok() {
+        let name = "Foo";
+        let hospital = Hospital::new(name);
+        let mut sut = InMemoryHospitalRepository::containing_single(hospital);
+
+        let result = sut.remove_patient_from_hospital(1, &By::Name(name.to_owned()));
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn remove_patient_from_hospital_when_patient_admitted_removes_them() {
+        let patient_id = 1;
+        let patient = Patient::new("Bar").with_id(patient_id);
+
+        let hospital_name = "Foo";
+        let mut hospital = Hospital::new(hospital_name);
+        hospital.add_patient(patient.clone());
+
+        let mut sut = InMemoryHospitalRepository::containing_single(hospital);
+
+        let result = sut.remove_patient_from_hospital(
+            patient_id, 
+            &By::Name(hospital_name.to_owned())
+        );
+
+        assert!(result.is_ok());
+        assert!(!result.unwrap().has_patient(&patient));
     }
 }

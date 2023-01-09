@@ -45,16 +45,6 @@ impl AnchorRepository for InMemoryAnchorRepository {
             None => Ok(None)
         }
     }
-
-    fn remove_by_id(&mut self, id: u32) -> Result<bool, String> {
-        let mut binding = self.stored.lock().unwrap();
-        if binding.contains_key(&id) {
-            binding.remove(&id);
-            Ok(true)
-        } else {
-            Ok(false)
-        }
-    }
 }
 
 impl Default for InMemoryAnchorRepository {
@@ -134,41 +124,6 @@ mod tests {
 
         assert!(result.is_ok());
         assert!(result?.unwrap().id().unwrap() == 1);
-
-        Ok(())
-    }
-
-    #[test]
-    fn remove_by_id_given_invalid_id_returns_false() -> Result<(), String> {
-        let mut sut = InMemoryAnchorRepository::new();
-
-        let result = sut.remove_by_id(0)?;
-
-        assert!(!result);
-
-        Ok(())
-    }
-
-    #[test]
-    fn remove_by_id_given_valid_id_returns_true() -> Result<(), String> {
-        let mut sut = InMemoryAnchorRepository::new();
-        sut.store(&Anchor::new("Foo Bar").with_id(1))?;
-
-        let result = sut.remove_by_id(1)?;
-
-        assert!(result);
-
-        Ok(())
-    }
-
-    #[test]
-    fn remove_by_id_given_valid_id_deletes_from_repo() -> Result<(), String> {
-        let mut sut = InMemoryAnchorRepository::new();
-        sut.store(&Anchor::new("Foo Bar").with_id(1))?;
-
-        sut.remove_by_id(1)?;
-
-        assert!(!sut.stored.lock().unwrap().contains_key(&1));
 
         Ok(())
     }

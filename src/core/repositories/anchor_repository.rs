@@ -10,8 +10,4 @@ pub trait AnchorRepository {
     /// retrieves the anchor with the given ID from the backing store, then
     /// returns either the anchor, nothing, or an error message
     fn get_by_id(&self, id: u32) -> Result<Option<Anchor>, String>;
-
-    /// removes the anchor with the given ID from the backing store, then 
-    /// returns a boolean indicating if the anchor existed or an error message
-    fn remove_by_id(&mut self, id: u32) -> Result<bool, String>;
 }

@@ -30,16 +30,6 @@ impl AnchorService {
             None => Err("Anchor has no ID".to_string())
         }
     }
-
-    pub fn delete_anchor(&mut self, id: u32) -> Result<(), String> {
-        let was_removed = self.repository.remove_by_id(id)?;
-
-        if was_removed {
-            Ok(())
-        } else {
-            Err(format!("No anchor exists with ID = {}", id))
-        }
-    }
 }
 
 #[cfg(test)]
@@ -56,7 +46,6 @@ pub mod tests {
         impl AnchorRepository for Dummy {
             fn store(&mut self, anchor: &Anchor) -> Result<Anchor, String>;
             fn get_by_id(&self, id: u32) -> Result<Option<Anchor>, String>;
-            fn remove_by_id(&mut self, id: u32) -> Result<bool, String>;
         }
     }
 
@@ -95,32 +84,6 @@ pub mod tests {
         let mut sut = AnchorService::new(mock);
 
         let result = sut.update(&Anchor::new("Baz Qux").with_id(1));
-
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn delete_given_an_invalid_id_returns_error() {
-        let mut mock = MockDummy::new();
-        mock
-            .expect_remove_by_id()
-            .returning(|_| Ok(false));
-        let mut sut = AnchorService::new(mock);
-
-        let result = sut.delete_anchor(1);
-
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn delete_given_a_valid_id_forwards_to_repository() {
-        let mut mock = MockDummy::new();
-        mock
-            .expect_remove_by_id()
-            .returning(|_| Ok(true));
-        let mut sut = AnchorService::new(mock);
-
-        let result = sut.delete_anchor(1);
 
         assert!(result.is_ok());
     }

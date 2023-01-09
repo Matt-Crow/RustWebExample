@@ -102,6 +102,10 @@ impl Hospital {
     pub fn has_patient(&self, patient: &Patient) -> bool {
         self.patients.contains(patient)
     }
+
+    pub fn remove_patient_by_id(&mut self, id: u32) {
+        self.patients.retain(|p| p.id.is_some() && p.id.unwrap() != id);
+    }
 }
 
 impl Clone for Hospital {

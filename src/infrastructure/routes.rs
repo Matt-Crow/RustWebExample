@@ -1,6 +1,6 @@
 // routes connect HTTP verbs & URLs to backend services
 
-use actix_web::{web::{ServiceConfig, resource, get, Json, self, post}, error::{ErrorInternalServerError, ErrorNotFound}};
+use actix_web::{web::{ServiceConfig, resource, get, Json, self, post, delete}, error::{ErrorInternalServerError, ErrorNotFound}, Responder, HttpResponse};
 
 use crate::core::{hospital_models::{Hospital, Patient}, services::service_provider::ServiceProvider};
 
@@ -15,6 +15,11 @@ pub fn configure_hospital_routes(cfg: &mut ServiceConfig) {
             .name("hospital")
             .route(get().to(get_hospital_by_name))
             .route(post().to(admit_patient))
+    );
+    cfg.service(
+        resource("/hospitals/{name}/{patient_id}")
+            .name("hospital_patients")
+            .route(delete().to(unadmit_patient))
     );
 }
 
@@ -64,6 +69,22 @@ async fn admit_patient(
 
     match updater.admit_patient_to_hospital(patient.0, &hospital_name) {
         Ok(hospital) => Ok(Json(hospital)),
+        Err(e) => Err(ErrorInternalServerError(e))
+    }
+}
+
+// todo only auth users
+async fn unadmit_patient(
+    services: web::Data<ServiceProvider>,
+    path: web::Path<(String, u32)>,
+) -> impl Responder {
+    let mutex = services.hospitals().lock();
+    let mut deleter = mutex.unwrap();
+    let hospital_name = &path.0;
+    let patient_id = path.1;
+
+    match deleter.unadmit_patient_from_hospital(patient_id, hospital_name) {
+        Ok(_) => Ok(HttpResponse::NoContent().body("")),
         Err(e) => Err(ErrorInternalServerError(e))
     }
 }

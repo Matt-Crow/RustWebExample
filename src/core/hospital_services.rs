@@ -22,6 +22,10 @@ impl HospitalService {
     pub fn admit_patient_to_hospital(&mut self, patient: Patient, hospital_name: &str) -> Result<Hospital, RepositoryError> {
         self.repository.add_patient_to_hospital(&By::Name(hospital_name.to_owned()), patient)
     }
+
+    pub fn unadmit_patient_from_hospital(&mut self, patient_id: u32, hospital_name: &str) -> Result<Hospital, RepositoryError> {
+        self.repository.remove_patient_from_hospital(patient_id, &By::Name(hospital_name.to_owned()))
+    }
 }
 
 #[cfg(test)]
@@ -40,6 +44,7 @@ pub mod tests {
             fn get_all_hospitals(&self) -> Result<Vec<Hospital>, RepositoryError>;
             fn get_hospital(&self, by: &By) -> Result<Option<Hospital>, RepositoryError>;
             fn add_patient_to_hospital(&mut self, by: &By, patient: Patient) -> Result<Hospital, RepositoryError>;
+            fn remove_patient_from_hospital(&mut self, patient_id: u32, hospital_selector: &By) -> Result<Hospital, RepositoryError>;
         }
     }
 
@@ -81,6 +86,20 @@ pub mod tests {
         let mut sut = HospitalService::new(mock);
 
         let result = sut.admit_patient_to_hospital(Patient::new("Foo"), "Bar");
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn unadmit_patient_forwards_to_repository() {
+        let mut mock = MockDummy::new();
+        mock
+            .expect_remove_patient_from_hospital()
+            .once()
+            .returning(|_, _| Err(RepositoryError::new("")));
+        let mut sut = HospitalService::new(mock);
+
+        let result = sut.unadmit_patient_from_hospital(1, "Foo");
 
         assert!(result.is_err());
     }
