@@ -38,10 +38,6 @@ impl AnchorService {
         }
     }
 
-    pub fn get_by_id(&self, id: u32) -> Result<Option<Anchor>, String> {
-        self.repository.get_by_id(id)
-    }
-
     pub fn delete_anchor(&mut self, id: u32) -> Result<(), String> {
         let was_removed = self.repository.remove_by_id(id)?;
 
@@ -129,20 +125,6 @@ pub mod tests {
         let mut sut = AnchorService::new(mock);
 
         let result = sut.update(&Anchor::new("Baz Qux").with_id(1));
-
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn get_by_id_forwards_to_repository() {
-        let mut mock = MockDummy::new();
-        mock
-            .expect_get_by_id()
-            .once()
-            .returning(|id| Ok(Some(Anchor::new("Foo Bar").with_id(id))));
-        let sut = AnchorService::new(mock);
-
-        let result = sut.get_by_id(1);
 
         assert!(result.is_ok());
     }

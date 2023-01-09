@@ -9,6 +9,7 @@ pub struct Department { // aggregate root of the model
     hospitals: HashMap<String, Hospital>
 }
 
+// todo move this logic over to the repository
 impl Department { // define methods on the Department
     pub fn new() -> Self {
         Self {
@@ -57,6 +58,7 @@ impl InvalidHospitalName {
     }
 }
 
+#[derive(Debug)]
 #[derive(Serialize, Deserialize)] // allows this to be converted to & from JSON
 pub struct Hospital {
     id: Option<u32>, // Option means this could potentially have no ID 
@@ -80,6 +82,14 @@ impl Hospital {
             patients: self.patients.clone()
         }
     }
+
+    pub fn id(&self) -> Option<u32> {
+        self.id
+    }
+
+    pub fn name(&self) -> String {
+        self.name.to_owned()
+    }
 }
 
 impl Clone for Hospital {
@@ -98,6 +108,7 @@ impl PartialEq for Hospital {
     }
 }
 
+#[derive(Debug)]
 #[derive(Serialize, Deserialize)]
 pub struct Patient {
     id: Option<u32>,

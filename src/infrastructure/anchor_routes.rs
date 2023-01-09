@@ -29,26 +29,9 @@ pub fn configure_anchor_routes(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::resource("/anchors/{id}")
             .name("news_anchor")
-            .route(web::get().to(get_anchor_by_id))
             .route(web::put().to(put_anchor))
             .route(web::delete().to(delete_anchor))
     );
-}
-
-async fn get_anchor_by_id(
-    id: web::Path<u32>, // grab path variables
-    service_provider: web::Data<ServiceProvider>
-) -> actix_web::Result<Json<Anchor>> {
-    let mutex = service_provider.anchors();
-    let getter = mutex.lock().unwrap();
-    
-    match getter.get_by_id(*id) {
-        Ok(maybe_anchor) => match maybe_anchor {
-            Some(anchor) => Ok(Json(anchor)),
-            None => Err(error::ErrorNotFound(format!("No anchor found with ID = {}", id)))
-        },
-        Err(msg) => Err(error::ErrorBadRequest(msg))
-    }
 }
 
 async fn post_anchor(anchor: Json<Anchor>, service_provider: web::Data<ServiceProvider>) -> actix_web::Result<Json<Anchor>> {

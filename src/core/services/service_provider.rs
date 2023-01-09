@@ -6,7 +6,7 @@ use std::sync::Mutex;
 use crate::core::{repositories::{
     anchor_repository::AnchorRepository, 
     in_memory_anchor_repository::InMemoryAnchorRepository
-}, hospital_services::HospitalService, hospital_repository::{HospitalRepository, InMemoryHospitalRepository}};
+}, hospital_services::HospitalService, hospital_repository::{HospitalRepository, InMemoryHospitalRepository}, hospital_models::Hospital};
 
 use super::anchor_service::AnchorService;
 
@@ -31,7 +31,13 @@ impl ServiceProvider {
     pub fn default() -> Self {
         Self::new(
             InMemoryAnchorRepository::new(),
-            InMemoryHospitalRepository::empty()
+            InMemoryHospitalRepository::containing(&vec![
+                Hospital::new("Atascadero"),
+                Hospital::new("Coalinga"),
+                Hospital::new("Napa"),
+                Hospital::new("Metropolitan"),
+                Hospital::new("Patton")
+            ])
         )
     }
 
