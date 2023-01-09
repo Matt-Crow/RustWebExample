@@ -23,14 +23,10 @@ An example web application using Rust for the backend.
 
 ## Available routes
 
-- POST `localhost:8080/api/v1/anchors`
-- GET `localhost:8080/api/v1/anchors`
-- GET `localhost:8080/api/v1/anchors/{id}`
-- DELETE `localhost:8080/api/v1/anchors/{id}`
-- PUT `localhost:8080/api/v1/anchors/{id}`
-- GET `localhost:8080/api/v1/forecast/{location}/{days}`
-- GET `localhost:8080/api/v1/forecast/to-farenheight/{celsius}`
-- GET `localhost:8080/api/v1/forecast/to-celsius/{farenheight}`
+- GET `/api/v1/hospitals`
+- GET `/api/v1/hospitals/{name}`
+- POST `/api/v1/hospitals/{name}` Patient
+- DELETE `/api/v1/hospitals/{name}/{patient_id}`
 
 ## Helpful links
 
