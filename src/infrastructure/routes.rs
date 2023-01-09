@@ -2,7 +2,7 @@
 
 use actix_web::{web::{ServiceConfig, resource, get, Json, self, post, delete}, error::{ErrorInternalServerError, ErrorNotFound}, Responder, HttpResponse};
 
-use crate::core::{hospital_models::{Hospital, Patient}, services::service_provider::ServiceProvider};
+use crate::core::{hospital_models::{Hospital, Patient}, service_provider::ServiceProvider};
 
 pub fn configure_hospital_routes(cfg: &mut ServiceConfig) {
     cfg.service(

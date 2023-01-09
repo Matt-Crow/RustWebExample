@@ -9,11 +9,8 @@ use actix_web::{
     web
 };
 use crate::{
-    core::services::service_provider::ServiceProvider,
-    infrastructure::{
-        anchor_routes::configure_anchor_routes, 
-        routes::configure_hospital_routes
-    }
+    core::service_provider::ServiceProvider,
+    infrastructure::routes::configure_hospital_routes
 };
 
 #[actix_web::main]
@@ -29,7 +26,6 @@ async fn main() -> std::io::Result<()> { // "()" is essentially "null"
         App::new()
             .app_data(sp.clone()) // app data is thread-safe
             .service(web::scope("/api/v1") // register API routes
-                .configure(configure_anchor_routes) // todo rm
                 .configure(configure_hospital_routes)
             )
         })

@@ -28,8 +28,6 @@ An example web application using Rust for the backend.
 - POST `/api/v1/hospitals/{name}` Patient
 - DELETE `/api/v1/hospitals/{name}/{patient_id}`
 
-- PUT `localhost:8080/api/v1/anchors/{id}`
-
 ## Helpful links
 
 - [Actix](https://actix.rs/docs/getting-started)
