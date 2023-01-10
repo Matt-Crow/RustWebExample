@@ -11,6 +11,8 @@ serde = { version = "1.0", features = ["derive"] }
 tiberius = "0.11.3"
 tokio = { version = "1.23.0", features = ["full"] }
 reqwest = "0.11.13"
+package = "0.0.0"
+actix-web-httpauth = "0.8.0"
 
 # https://github.com/prisma/tiberius/issues/145#issuecomment-829044670
 [dependencies.tokio-util]

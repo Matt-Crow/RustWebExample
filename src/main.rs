@@ -8,9 +8,10 @@ use actix_web::{
     App,
     web
 };
+use actix_web_httpauth::middleware::HttpAuthentication;
 use crate::{
-    core::service_provider::ServiceProvider,
-    infrastructure::routes::configure_hospital_routes
+    core::{service_provider::ServiceProvider, auth::authentication_middleware},
+    infrastructure::{routes::configure_hospital_routes, authentication::basic::configure_basic_authentication_routes}
 };
 
 #[actix_web::main]
@@ -25,7 +26,9 @@ async fn main() -> std::io::Result<()> { // "()" is essentially "null"
     HttpServer::new(move || {
         App::new()
             .app_data(sp.clone()) // app data is thread-safe
+            .configure(configure_basic_authentication_routes)
             .service(web::scope("/api/v1") // register API routes
+                .wrap(HttpAuthentication::basic(authentication_middleware))
                 .configure(configure_hospital_routes)
             )
         })
