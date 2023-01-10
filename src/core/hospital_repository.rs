@@ -1,9 +1,38 @@
 use std::{fmt::Display, sync::Mutex, collections::HashMap};
 
+use actix_web::body::BoxBody;
+use actix_web::{error::ResponseError, HttpResponse};
+use actix_web::http::StatusCode;
 use serde::{Serialize, Deserialize};
 
 use super::hospital_models::{Hospital, Patient};
 
+// todo migrate toward using this
+#[derive(Debug)]
+pub enum NewRepositoryError {
+    HospitalNotFound(By)
+}
+
+impl ResponseError for NewRepositoryError {
+    fn status_code(&self) -> StatusCode {
+        match *self {
+            Self::HospitalNotFound(_) => StatusCode::NOT_FOUND
+        }
+    }
+
+    fn error_response(&self) -> HttpResponse<BoxBody> {
+        HttpResponse::build(self.status_code())
+            .body(self.to_string())
+    }
+}
+
+impl Display for NewRepositoryError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            Self::HospitalNotFound(ref selector) => write!(f, "Hospital not found: {}", selector)
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RepositoryError {
@@ -44,6 +73,7 @@ pub trait HospitalRepository {
     fn remove_patient_from_hospital(&mut self, patient_id: u32, hospital_selector: &By) -> Result<Hospital, RepositoryError>;
 }
 
+#[derive(Debug)]
 pub enum By {
     Id(u32),
     Name(String)

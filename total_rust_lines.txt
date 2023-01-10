@@ -1,0 +1,2 @@
+rem https://superuser.com/a/1336102
+type ./src/**/*.rs | Measure-Object -line
