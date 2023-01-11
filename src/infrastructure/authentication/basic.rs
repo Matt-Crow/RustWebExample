@@ -11,6 +11,8 @@ use actix_web::{web::{ServiceConfig, post, Json}, Responder, error::{ErrorBadReq
 use actix_web_httpauth::headers::authorization::Basic;
 use serde::{Serialize, Deserialize};
 
+use crate::core::auth::{Authenticator, AuthenticationError};
+
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct User {
@@ -54,6 +56,25 @@ impl Display for UserValidationError {
             Self::InvalidUsername(username) => write!(f, "Invalid username: {}", username),
             Self::InvalidPassword(password) => write!(f, "Invalid password: {}", password)
         }
+    }
+}
+
+pub struct BasicAuthenticator {
+
+}
+
+impl BasicAuthenticator {
+    pub fn new() -> Self {
+        Self {
+
+        }
+    }
+}
+
+impl Authenticator for BasicAuthenticator {
+    fn authenticate(&self, http_authorization_header: &str) -> Result<bool, AuthenticationError> {
+        println!("BasicAuthenticator: {}", http_authorization_header);
+        Ok(true)
     }
 }
 

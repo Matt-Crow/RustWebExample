@@ -29,6 +29,7 @@ async fn main() -> std::io::Result<()> { // "()" is essentially "null"
             .configure(configure_basic_authentication_routes)
             .service(web::scope("/api/v1") // register API routes
                 .wrap(HttpAuthentication::basic(authentication_middleware))
+                //.wrap(Authentication::new())
                 .configure(configure_hospital_routes)
             )
         })
