@@ -1,6 +1,9 @@
+use std::{rc::Rc, future::{Ready, ready}};
+
 // provides the core details required for authentication & authorization
-use actix_web::{dev::{ServiceRequest}, Error, web, error::{ErrorUnauthorized, ErrorBadRequest, ErrorInternalServerError}};
+use actix_web::{dev::{ServiceRequest, Service, ServiceResponse, forward_ready, Transform}, Error, web, error::{ErrorUnauthorized, ErrorBadRequest, ErrorInternalServerError}};
 use actix_web_httpauth::extractors::basic::BasicAuth;
+use futures_util::{future::LocalBoxFuture, FutureExt};
 
 use super::service_provider::ServiceProvider;
 
@@ -13,6 +16,7 @@ pub trait Authenticator {
 
 pub struct AuthenticationError(String);
 
+/// built on top of the Actix Web BasicAuth crate, which is not ideal
 pub async fn authentication_middleware(req: ServiceRequest, _credentials: BasicAuth) -> Result<ServiceRequest, (Error, ServiceRequest)> {
     let authentication_header = req.headers().get("Authorization");
     if authentication_header.is_none() {
@@ -51,12 +55,12 @@ pub async fn authentication_middleware(req: ServiceRequest, _credentials: BasicA
         ))
     }
 }
-/*
-pub struct Authentication {
+
+pub struct AuthenticationMiddlewareFactory {
 
 }
 
-impl Authentication {
+impl AuthenticationMiddlewareFactory {
     pub fn new() -> Self {
         Self {
 
@@ -64,7 +68,13 @@ impl Authentication {
     }
 }
 
-impl<S, B> Transform<S, ServiceRequest> for Authentication
+impl Default for AuthenticationMiddlewareFactory {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<S, B> Transform<S, ServiceRequest> for AuthenticationMiddlewareFactory
 where
     S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     S::Future: 'static,
@@ -78,13 +88,13 @@ where
 
     fn new_transform(&self, service: S) -> Self::Future {
         ready(Ok(AuthenticationMiddleware {
-            service
+            service: Rc::new(service)
         }))
     }
 }
 
 pub struct AuthenticationMiddleware<S> {
-    service: S
+    service: Rc<S>
 }
 
 impl<S> AuthenticationMiddleware<S> {
@@ -129,16 +139,17 @@ where
     forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
-        // need to be able to clone self.service
+        let service = self.service.clone();
+
         async move {
             let header = Self::extract_auth_header(&req)?;
             let is_authentic = Self::is_authentic(&req, &header)?;
             if is_authentic {
-                let res = self.service.call(req).await?;
-                return Ok(res);
+                let res = service.call(req).await?;
+                Ok(res)
             } else {
-                return Err(ErrorUnauthorized("You are not authorized"));
+                Err(ErrorUnauthorized("You are not authorized"))
             }
         }.boxed_local()
     }
-}*/
+}
