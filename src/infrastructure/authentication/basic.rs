@@ -7,51 +7,61 @@
 
 use std::fmt::Display;
 
-use actix_web::{web::{ServiceConfig, post, Json, self}, Responder, error::{ErrorBadRequest, ErrorInternalServerError, ErrorUnauthorized}, http::{header::TryIntoHeaderValue}, Error, dev::ServiceRequest};
-use actix_web_httpauth::{headers::authorization::Basic, extractors::basic::BasicAuth};
+use actix_web::{web::{ServiceConfig, post, Json, self}, Responder, error::{ErrorBadRequest, ErrorInternalServerError, ErrorUnauthorized}, http::{header::TryIntoHeaderValue}, Error, dev::ServiceRequest, FromRequest};
+use actix_web_httpauth::{headers::authorization::Basic, extractors::basic::BasicAuth, middleware::HttpAuthentication};
+use futures_util::Future;
 use serde::{Serialize, Deserialize};
 
 use crate::core::{auth::{Authenticator, AuthenticationError}, service_provider::ServiceProvider};
 
+/*
+fn foo<T, F, O>(t: F) -> HttpAuthentication<T, F>
+where
+    T: FromRequest,
+    F: Fn(ServiceRequest, T) -> O, 
+    O: Future<Output = Result<ServiceRequest, (Error, ServiceRequest)>>
+{
+    HttpAuthentication::basic(authentication_middleware)
+}
+*/
 
-/// built on top of the Actix Web BasicAuth crate, which is not ideal
-pub async fn authentication_middleware(req: ServiceRequest, _credentials: BasicAuth) -> Result<ServiceRequest, (Error, ServiceRequest)> {
-    let authentication_header = req.headers().get("Authorization");
-    if authentication_header.is_none() {
-        return Err((
-            ErrorUnauthorized("Missing Authorization header"),
-            req
-        ));
-    }
+/*
+fn bar() -> impl Fn(u32) -> String {
+    baz
+}
 
-    let maybe_auth_value = authentication_header.unwrap().to_str();
-    if maybe_auth_value.is_err() {
-        return Err((
-            ErrorBadRequest("Invalid Authentication header"),
-            req
-        ));
-    }
-    
-    let auth_value = maybe_auth_value.unwrap();
+fn baz(i: u32) -> String {
+    "hi".to_string()
+}
+
+fn qux<T>() -> T
+where
+    T: Fn(u32) -> String
+{
+    baz
+}
+*/
+
+fn foo<F, O>(t: F) -> HttpAuthentication<BasicAuth, F>
+where
+    F: Fn(ServiceRequest, BasicAuth) -> O,
+    O: Future<Output = Result<ServiceRequest, (Error, ServiceRequest)>>
+{
+    let doo = HttpAuthentication::basic(t);
+    doo
+}
+
+fn jjj() {
+    let m = foo(basic_auth_middleware);
+}
+
+
+async fn basic_auth_middleware(req: ServiceRequest, credentials: BasicAuth) -> Result<ServiceRequest, (Error, ServiceRequest)> {
+    // can access data through request
     // https://stackoverflow.com/a/64058241
     let sp = req.app_data::<web::Data<ServiceProvider>>().unwrap();
-
-    match sp.authenticator().authenticate(auth_value) {
-        Ok(is_authentic) => {
-            if is_authentic {
-                Ok(req)
-            } else {
-                Err((
-                    ErrorUnauthorized(""),
-                    req
-                ))
-            }
-        },
-        Err(_) => Err((
-            ErrorInternalServerError(""),
-            req
-        ))
-    }
+    
+    Ok(req)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
