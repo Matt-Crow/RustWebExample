@@ -1,8 +1,12 @@
-use std::{rc::Rc, future::{Ready, ready}, sync::Arc, fmt::Display};
-
 // provides the core details required for authentication & authorization
+
+use std::{rc::Rc, future::{Ready, ready}, sync::Arc, fmt::Display};
 use actix_web::{dev::{ServiceRequest, Service, ServiceResponse, forward_ready, Transform}, Error, error::{ErrorUnauthorized, ErrorBadRequest}};
 use futures_util::{future::LocalBoxFuture, FutureExt};
+
+pub fn make_actix_authenticator(auth: Arc<dyn Authenticator>) -> ActixMiddlewareAdapterFactory {
+    ActixMiddlewareAdapterFactory::new(Arc::new(AuthenticationMiddlewareAdapter::new(auth)))
+}
 
 /// marks a struct as providing authentication of HTTP requests
 pub trait Authenticator: Send + Sync { // must be safe for multiple threads to access at the same time
@@ -52,7 +56,7 @@ impl MiddlewareAdapter for AuthenticationMiddlewareAdapter {
     fn apply_to(&self, req: &ServiceRequest) -> Result<(), Error> {
         let auth_header = self.extract_auth_header(req)?;
         let is_auth = self.authenticator.authenticate(&auth_header)
-            .map_err(|e| ErrorUnauthorized(e))?;
+            .map_err(ErrorUnauthorized)?;
         if is_auth {
             Ok(())
         } else {

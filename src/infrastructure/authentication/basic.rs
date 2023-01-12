@@ -7,59 +7,39 @@
 
 use std::fmt::Display;
 
-use actix_web::{web::{ServiceConfig, post, Json, self}, Responder, error::{ErrorBadRequest, ErrorInternalServerError, ErrorUnauthorized}, http::{header::TryIntoHeaderValue}, Error, dev::ServiceRequest, FromRequest};
-use actix_web_httpauth::{headers::authorization::Basic, extractors::basic::BasicAuth, middleware::HttpAuthentication};
-use futures_util::Future;
+use actix_web::{web::{ServiceConfig, post, Json, self}, Responder, error::{ErrorBadRequest, ErrorInternalServerError}, http::header::TryIntoHeaderValue, Error, dev::ServiceRequest};
+use actix_web_httpauth::{headers::authorization::Basic, extractors::basic::BasicAuth};
 use serde::{Serialize, Deserialize};
 
 use crate::core::{auth::{Authenticator, AuthenticationError}, service_provider::ServiceProvider};
 
 /*
-fn foo<T, F, O>(t: F) -> HttpAuthentication<T, F>
+fn foo<T, F, O>(use_basic_auth: bool) -> HttpAuthentication<T, F>
 where
     T: FromRequest,
-    F: Fn(ServiceRequest, T) -> O, 
+    F: Fn(ServiceRequest, T) -> O,
     O: Future<Output = Result<ServiceRequest, (Error, ServiceRequest)>>
 {
-    HttpAuthentication::basic(authentication_middleware)
+    // https://stackoverflow.com/a/64298764
+    // apparently, Rust has 3 different types for functions:
+    // 1. the Fn/FnOne/FnMut traits
+    // 2. function *pointers*
+    // 3. function *items* 
+    // I need to coerce f_item from #3 to #1
+    let f_item = basic_auth_middleware;
+    let goo = if use_basic_auth {
+        HttpAuthentication::basic(basic_auth_middleware)
+    } else {
+        HttpAuthentication::bearer(bearer_auth_middleware)
+    }
+    goo
 }
 */
 
-/*
-fn bar() -> impl Fn(u32) -> String {
-    baz
-}
-
-fn baz(i: u32) -> String {
-    "hi".to_string()
-}
-
-fn qux<T>() -> T
-where
-    T: Fn(u32) -> String
-{
-    baz
-}
-*/
-
-fn foo<F, O>(t: F) -> HttpAuthentication<BasicAuth, F>
-where
-    F: Fn(ServiceRequest, BasicAuth) -> O,
-    O: Future<Output = Result<ServiceRequest, (Error, ServiceRequest)>>
-{
-    let doo = HttpAuthentication::basic(t);
-    doo
-}
-
-fn jjj() {
-    let m = foo(basic_auth_middleware);
-}
-
-
-async fn basic_auth_middleware(req: ServiceRequest, credentials: BasicAuth) -> Result<ServiceRequest, (Error, ServiceRequest)> {
+pub async fn basic_auth_middleware(req: ServiceRequest, _credentials: BasicAuth) -> Result<ServiceRequest, (Error, ServiceRequest)> {
     // can access data through request
     // https://stackoverflow.com/a/64058241
-    let sp = req.app_data::<web::Data<ServiceProvider>>().unwrap();
+    let _sp = req.app_data::<web::Data<ServiceProvider>>().unwrap();
     
     Ok(req)
 }

@@ -3,22 +3,19 @@
 pub mod core; // can declare modules as public in case other programs need them
 mod infrastructure;
 
-use std::sync::Arc;
-
 use actix_web::{
     HttpServer, 
     App,
     web
 };
+use actix_web_httpauth::middleware::HttpAuthentication;
 use crate::{
-    core::{service_provider::ServiceProvider, auth::{ActixMiddlewareAdapterFactory, AuthenticationMiddlewareAdapter}, configuration::Configuration},
-    infrastructure::{routes::configure_hospital_routes, authentication::basic::{configure_basic_authentication_routes, BasicAuthenticator}}
+    core::service_provider::ServiceProvider,
+    infrastructure::{routes::configure_hospital_routes, authentication::basic::{configure_basic_authentication_routes, basic_auth_middleware}}
 };
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> { // "()" is essentially "null"
-    let configuration = Configuration::from_args();
-    println!("Using configuration {:#?}", configuration);
 
     // The Rust ecosystem does not appear to have a good Dependency Injection
     // framework, so we have to bundle together the service providers ourselves.
@@ -31,7 +28,7 @@ async fn main() -> std::io::Result<()> { // "()" is essentially "null"
             .app_data(sp.clone()) // app data is thread-safe
             .configure(configure_basic_authentication_routes)
             .service(web::scope("/api/v1") // register API routes
-                .wrap(ActixMiddlewareAdapterFactory::new(Arc::new(AuthenticationMiddlewareAdapter::new(Arc::new(BasicAuthenticator::new())))))
+                .wrap(HttpAuthentication::basic(basic_auth_middleware))
                 .configure(configure_hospital_routes)
             )
         })
@@ -39,3 +36,37 @@ async fn main() -> std::io::Result<()> { // "()" is essentially "null"
         .run()
         .await
 }
+
+
+/*
+trait Demo {
+
+}
+
+struct A {
+
+}
+
+impl Demo for A {
+    
+}
+
+struct B {
+
+}
+
+impl Demo for B {
+
+}
+
+fn pick_demo<T>(use_a: bool) -> Box<T> 
+where
+    T: Demo
+{
+    if use_a {
+        Box::new(A {})
+    } else {
+        Box::new(B {})
+    }
+}
+*/
