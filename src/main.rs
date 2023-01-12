@@ -11,7 +11,7 @@ use actix_web::{
 use actix_web_httpauth::middleware::HttpAuthentication;
 use crate::{
     core::service_provider::ServiceProvider,
-    infrastructure::{routes::configure_hospital_routes, authentication::basic::{configure_basic_authentication_routes, basic_auth_middleware}}
+    infrastructure::{routes::configure_hospital_routes, authentication::jwt::{jwt_auth_middleware, configure_jwt_routes}}
 };
 
 #[actix_web::main]
@@ -26,9 +26,9 @@ async fn main() -> std::io::Result<()> { // "()" is essentially "null"
     HttpServer::new(move || {
         App::new()
             .app_data(sp.clone()) // app data is thread-safe
-            .configure(configure_basic_authentication_routes)
+            .configure(configure_jwt_routes)
             .service(web::scope("/api/v1") // register API routes
-                .wrap(HttpAuthentication::basic(basic_auth_middleware))
+                .wrap(HttpAuthentication::bearer(jwt_auth_middleware))
                 .configure(configure_hospital_routes)
             )
         })

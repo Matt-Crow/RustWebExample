@@ -5,6 +5,7 @@ An example web application using Rust for the backend.
 ## Environment Variables
 
 ### Required Environment Variables
+- `JWT_SECRET`: the secret key to use for signing JSON web tokens
 - `TIBERIUS_USERNAME`: the username Tiberius will log in as to the MSSQL server
 - `TIBERIUS_PASSWORD`: the password Tiberius will use to log in to the MSSQL server
 
@@ -27,6 +28,7 @@ An example web application using Rust for the backend.
 - GET `/api/v1/hospitals/{name}`
 - POST `/api/v1/hospitals/{name}` Patient
 - DELETE `/api/v1/hospitals/{name}/{patient_id}`
+- POST `/jwt` `{email: string}` to receive JWT
 
 ## Helpful links
 
