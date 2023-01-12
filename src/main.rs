@@ -8,9 +8,10 @@ use actix_web::{
     App,
     web
 };
+use actix_web_httpauth::middleware::HttpAuthentication;
 use crate::{
     core::service_provider::ServiceProvider,
-    infrastructure::routes::configure_hospital_routes
+    infrastructure::{routes::configure_hospital_routes, authentication::jwt::{jwt_auth_middleware, configure_jwt_routes}}
 };
 
 #[actix_web::main]
@@ -25,7 +26,9 @@ async fn main() -> std::io::Result<()> { // "()" is essentially "null"
     HttpServer::new(move || {
         App::new()
             .app_data(sp.clone()) // app data is thread-safe
+            .configure(configure_jwt_routes)
             .service(web::scope("/api/v1") // register API routes
+                .wrap(HttpAuthentication::bearer(jwt_auth_middleware))
                 .configure(configure_hospital_routes)
             )
         })
@@ -33,3 +36,37 @@ async fn main() -> std::io::Result<()> { // "()" is essentially "null"
         .run()
         .await
 }
+
+
+/*
+trait Demo {
+
+}
+
+struct A {
+
+}
+
+impl Demo for A {
+    
+}
+
+struct B {
+
+}
+
+impl Demo for B {
+
+}
+
+fn pick_demo<T>(use_a: bool) -> Box<T> 
+where
+    T: Demo
+{
+    if use_a {
+        Box::new(A {})
+    } else {
+        Box::new(B {})
+    }
+}
+*/
