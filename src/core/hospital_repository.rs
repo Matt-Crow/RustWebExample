@@ -54,7 +54,7 @@ impl Display for RepositoryError {
 }
 
 /// designates something as an interface into a backing store of hospitals
-pub trait HospitalRepository {
+pub trait HospitalRepository: Send + Sync { // must be safe to have multiple threads accessing at the same time
 
     /// retrieves all hospitals from the backing store, then returns them, or
     /// an error if applicable

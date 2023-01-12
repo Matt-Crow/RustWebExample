@@ -9,12 +9,14 @@ use actix_web::{
     web
 };
 use crate::{
-    core::{service_provider::ServiceProvider, auth::AuthenticationMiddlewareFactory},
+    core::{service_provider::ServiceProvider, auth::AuthenticationMiddlewareAdapterFactory, configuration::Configuration},
     infrastructure::{routes::configure_hospital_routes, authentication::basic::configure_basic_authentication_routes}
 };
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> { // "()" is essentially "null"
+    let configuration = Configuration::from_args();
+    println!("Using configuration {:#?}", configuration);
 
     // The Rust ecosystem does not appear to have a good Dependency Injection
     // framework, so we have to bundle together the service providers ourselves.
@@ -27,7 +29,7 @@ async fn main() -> std::io::Result<()> { // "()" is essentially "null"
             .app_data(sp.clone()) // app data is thread-safe
             .configure(configure_basic_authentication_routes)
             .service(web::scope("/api/v1") // register API routes
-                .wrap(AuthenticationMiddlewareFactory::new())
+                .wrap(AuthenticationMiddlewareAdapterFactory::new(sp.clone().into_inner()))
                 .configure(configure_hospital_routes)
             )
         })

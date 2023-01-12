@@ -1,14 +1,14 @@
-use std::{rc::Rc, future::{Ready, ready}};
+use std::{rc::Rc, future::{Ready, ready}, sync::Arc};
 
 // provides the core details required for authentication & authorization
 use actix_web::{dev::{ServiceRequest, Service, ServiceResponse, forward_ready, Transform}, Error, web, error::{ErrorUnauthorized, ErrorBadRequest, ErrorInternalServerError}};
 use actix_web_httpauth::extractors::basic::BasicAuth;
 use futures_util::{future::LocalBoxFuture, FutureExt};
 
-use super::service_provider::ServiceProvider;
+use super::service_provider::{ServiceProvider, self};
 
 /// marks a struct as providing authentication of HTTP requests
-pub trait Authenticator {
+pub trait Authenticator: Send + Sync { // must be safe for multiple threads to access at the same time
     /// checks the result of a request's authorization header, then returns true
     /// if it is valid and no errors occur
     fn authenticate(&self, http_authorization_header: &str) -> Result<bool, AuthenticationError>;
@@ -56,25 +56,19 @@ pub async fn authentication_middleware(req: ServiceRequest, _credentials: BasicA
     }
 }
 
-pub struct AuthenticationMiddlewareFactory {
-
+pub struct AuthenticationMiddlewareAdapterFactory {
+    service_provider: Arc<ServiceProvider>
 }
 
-impl AuthenticationMiddlewareFactory {
-    pub fn new() -> Self {
+impl AuthenticationMiddlewareAdapterFactory {
+    pub fn new(service_provider: Arc<ServiceProvider>) -> Self {
         Self {
-
+            service_provider
         }
     }
 }
 
-impl Default for AuthenticationMiddlewareFactory {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<S, B> Transform<S, ServiceRequest> for AuthenticationMiddlewareFactory
+impl<S, B> Transform<S, ServiceRequest> for AuthenticationMiddlewareAdapterFactory
 where
     S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     S::Future: 'static,
@@ -83,21 +77,23 @@ where
     type Response = ServiceResponse<B>;
     type Error = Error;
     type InitError = ();
-    type Transform = AuthenticationMiddleware<S>;
+    type Transform = AuthenticationMiddlewareAdapter<S>;
     type Future = Ready<Result<Self::Transform, Self::InitError>>;
 
     fn new_transform(&self, service: S) -> Self::Future {
-        ready(Ok(AuthenticationMiddleware {
-            service: Rc::new(service)
+        ready(Ok(AuthenticationMiddlewareAdapter {
+            adapted: Box::new(|_req| Ok("boomer".to_owned())),
+            actix_service: Rc::new(service)
         }))
     }
 }
 
-pub struct AuthenticationMiddleware<S> {
-    service: Rc<S>
+pub struct AuthenticationMiddlewareAdapter<S> {
+    adapted: Box<dyn Fn(&ServiceRequest) -> Result<String, Error>>,
+    actix_service: Rc<S>
 }
 
-impl<S> AuthenticationMiddleware<S> {
+impl<S> AuthenticationMiddlewareAdapter<S> {
     fn extract_auth_header(req: &ServiceRequest) -> Result<String, Error> {
         let maybe_auth_header = req.headers().get("Authorization");
         if maybe_auth_header.is_none() {
@@ -126,7 +122,7 @@ impl<S> AuthenticationMiddleware<S> {
     }
 }
 
-impl<S, B> Service<ServiceRequest> for AuthenticationMiddleware<S>
+impl<S, B> Service<ServiceRequest> for AuthenticationMiddlewareAdapter<S>
 where
     S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     S::Future: 'static,
@@ -136,10 +132,10 @@ where
     type Error = Error;
     type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
 
-    forward_ready!(service);
+    forward_ready!(actix_service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
-        let service = self.service.clone();
+        let service = self.actix_service.clone();
 
         async move {
             let header = Self::extract_auth_header(&req)?;
