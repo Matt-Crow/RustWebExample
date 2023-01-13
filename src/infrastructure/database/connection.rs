@@ -17,8 +17,8 @@ pub fn create_config_from_env() -> Result<Config, Box<dyn std::error::Error>> {
     }
 
     config.authentication(AuthMethod::sql_server(
-        env::var("TIBERIUS_USERNAME")?,
-        env::var("TIBERIUS_PASSWORD")?
+        env::var("TIBERIUS_USERNAME").expect("Don't forget to set the TIBERIUS_USERNAME environment variable"),
+        env::var("TIBERIUS_PASSWORD").expect("Don't forget to set the TIBERIUS_PASSWORD environment variable")
     ));
 
     Ok(config)

@@ -23,7 +23,6 @@ pub fn configure_hospital_routes(cfg: &mut ServiceConfig) {
     );
 }
 
-// todo only auth users can see patients
 async fn get_all_hospitals(
     // web::Data grabs shared state registered during app creation
     services: web::Data<ServiceProvider>
@@ -39,7 +38,6 @@ async fn get_all_hospitals(
     }
 }
 
-// todo only auth users can view patients
 async fn get_hospital_by_name(
     services: web::Data<ServiceProvider>,
     name: web::Path<String>
@@ -58,7 +56,6 @@ async fn get_hospital_by_name(
     }
 }
 
-// todo only auth users
 async fn admit_patient(
     services: web::Data<ServiceProvider>,
     hospital_name: web::Path<String>,
@@ -73,7 +70,6 @@ async fn admit_patient(
     }
 }
 
-// todo only auth users
 async fn unadmit_patient(
     services: web::Data<ServiceProvider>,
     path: web::Path<(String, u32)>,

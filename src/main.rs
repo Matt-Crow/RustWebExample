@@ -11,11 +11,17 @@ use actix_web::{
 use actix_web_httpauth::middleware::HttpAuthentication;
 use crate::{
     core::service_provider::ServiceProvider,
-    infrastructure::{routes::configure_hospital_routes, authentication::jwt::{jwt_auth_middleware, configure_jwt_routes}}
+    infrastructure::{routes::configure_hospital_routes, authentication::jwt::{jwt_auth_middleware, configure_jwt_routes}, database::connection::{create_config_from_env, create_client}}
 };
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> { // "()" is essentially "null"
+    let mssql_config = create_config_from_env().expect("Failed to read MSSQL config!");
+    let client = create_client(mssql_config).await;
+    match client {
+        Ok(client) => println!("MSSQL client: {:#?}", client),
+        Err(error) => println!("Error creating MSSQL client: {:#?}", error)
+    }
 
     // The Rust ecosystem does not appear to have a good Dependency Injection
     // framework, so we have to bundle together the service providers ourselves.
