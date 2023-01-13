@@ -30,6 +30,14 @@ async fn main() -> std::io::Result<()> { // "()" is essentially "null"
         println!("Row: {:#?}", row);
     }
 
+    /*
+    let db_connection_pool = make_db_pool().await;
+    println!("DB connection pool: {:#?}", db_connection_pool);
+    let c = db_connection_pool.unwrap();
+    let conn = c.get().await; // times out here
+    println!("Connection: {:#?}", conn);
+    */
+
     // The Rust ecosystem does not appear to have a good Dependency Injection
     // framework, so we have to bundle together the service providers ourselves.
     let sp = web::Data::new(ServiceProvider::default());

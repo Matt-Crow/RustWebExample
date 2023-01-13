@@ -16,6 +16,8 @@ actix-web-httpauth = "0.8.0"
 futures-util = "0.3.25"
 jsonwebtoken = "8.2.0"
 chrono = "0.4.23"
+bb8 = "0.8.0"
+bb8-tiberius = "0.13.0"
 
 # https://github.com/prisma/tiberius/issues/145#issuecomment-829044670
 [dependencies.tokio-util]

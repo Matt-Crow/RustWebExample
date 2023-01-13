@@ -295,6 +295,34 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
 
 [[package]]
+name = "bb8"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1627eccf3aa91405435ba240be23513eeca466b5dc33866422672264de061582"
+dependencies = [
+ "async-trait",
+ "futures-channel",
+ "futures-util",
+ "parking_lot",
+ "tokio",
+]
+
+[[package]]
+name = "bb8-tiberius"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7102d4175a810f15b38cc162f7050701d2384e47ff04664a574b5ffba960e455"
+dependencies = [
+ "async-trait",
+ "bb8",
+ "futures",
+ "thiserror",
+ "tiberius",
+ "tokio",
+ "tokio-util 0.6.10",
+]
+
+[[package]]
 name = "bitflags"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1579,6 +1607,8 @@ version = "0.1.0"
 dependencies = [
  "actix-web",
  "actix-web-httpauth",
+ "bb8",
+ "bb8-tiberius",
  "chrono",
  "futures-util",
  "jsonwebtoken",
@@ -1834,6 +1864,7 @@ dependencies = [
  "asynchronous-codec",
  "byteorder",
  "bytes",
+ "chrono",
  "connection-string",
  "encoding",
  "enumflags2",
@@ -1845,6 +1876,8 @@ dependencies = [
  "pin-project-lite",
  "pretty-hex",
  "thiserror",
+ "tokio",
+ "tokio-util 0.7.4",
  "tracing",
  "uuid",
  "winauth",
@@ -1967,6 +2000,7 @@ checksum = "0bb2e075f03b3d66d8d8785356224ba688d2906a371015e225beeb65ca92c740"
 dependencies = [
  "bytes",
  "futures-core",
+ "futures-io",
  "futures-sink",
  "pin-project-lite",
  "tokio",
