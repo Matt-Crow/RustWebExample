@@ -19,8 +19,15 @@ async fn main() -> std::io::Result<()> { // "()" is essentially "null"
     let mssql_config = create_config_from_env().expect("Failed to read MSSQL config!");
     let client = create_client(mssql_config).await;
     match client {
-        Ok(client) => println!("MSSQL client: {:#?}", client),
-        Err(error) => println!("Error creating MSSQL client: {:#?}", error)
+        Ok(ref client) => println!("MSSQL client: {:#?}", client),
+        Err(ref error) => println!("Error creating MSSQL client: {:#?}", error)
+    }
+
+    let mut c = client.unwrap();
+    let q = c.query("SELECT name FROM master.sys.databases;", &[]).await;
+    let query_result = q.unwrap().into_first_result().await.unwrap();
+    for row in query_result {
+        println!("Row: {:#?}", row);
     }
 
     // The Rust ecosystem does not appear to have a good Dependency Injection
