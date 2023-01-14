@@ -1,38 +1,6 @@
 use std::{fmt::Display, sync::Mutex, collections::HashMap};
-
-use actix_web::body::BoxBody;
-use actix_web::{error::ResponseError, HttpResponse};
-use actix_web::http::StatusCode;
 use serde::{Serialize, Deserialize};
-
 use super::hospital_models::{Hospital, Patient};
-
-// todo migrate toward using this
-#[derive(Debug)]
-pub enum NewRepositoryError {
-    HospitalNotFound(By)
-}
-
-impl ResponseError for NewRepositoryError {
-    fn status_code(&self) -> StatusCode {
-        match *self {
-            Self::HospitalNotFound(_) => StatusCode::NOT_FOUND
-        }
-    }
-
-    fn error_response(&self) -> HttpResponse<BoxBody> {
-        HttpResponse::build(self.status_code())
-            .body(self.to_string())
-    }
-}
-
-impl Display for NewRepositoryError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match *self {
-            Self::HospitalNotFound(ref selector) => write!(f, "Hospital not found: {}", selector)
-        }
-    }
-}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RepositoryError {
@@ -75,14 +43,12 @@ pub trait HospitalRepository: Send + Sync { // must be safe to have multiple thr
 
 #[derive(Debug)]
 pub enum By {
-    Id(u32),
     Name(String)
 }
 
 impl Display for By {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            By::Id(id) => write!(f, "Hospital with id {}", id),
             By::Name(name) => write!(f, "Hospital with name {}", name)
         }
     }
@@ -109,14 +75,6 @@ impl InMemoryHospitalRepository {
         }
 
         repo
-    }
-
-    pub fn containing_single(hospital: Hospital) -> Self {
-        Self::containing(&vec![hospital])
-    }
-
-    pub fn empty() -> Self {
-        Self::containing(&Vec::new())
     }
 
     fn insert(&mut self, hospital: &Hospital) {
@@ -163,9 +121,6 @@ impl HospitalRepository for InMemoryHospitalRepository {
         let hospitals = mutex.lock().unwrap();
 
         match by {
-            By::Id(id) => {
-                Ok(hospitals.get(id).map(|ptr| ptr.to_owned()))
-            },
             By::Name(ref name) => {
                 let sanitized = Self::sanitize_name(name);
                 let index_mutex = self.name_to_id.lock();
@@ -224,6 +179,16 @@ pub mod tests {
 
     use super::*;
 
+    impl InMemoryHospitalRepository {
+        pub fn containing_single(hospital: Hospital) -> Self {
+            Self::containing(&vec![hospital])
+        }
+    
+        pub fn empty() -> Self {
+            Self::containing(&Vec::new())
+        }
+    }
+
     #[test]
     fn get_all_hospitals_given_empty_has_zero_length() {
         let sut = InMemoryHospitalRepository::empty();
@@ -254,24 +219,10 @@ pub mod tests {
     fn get_hospital_given_no_matches_returns_none() {
         let sut = InMemoryHospitalRepository::empty();
 
-        let result = sut.get_hospital(&By::Id(1));
+        let result = sut.get_hospital(&By::Name(String::from("foo")));
 
         assert!(result.is_ok());
         assert!(result.unwrap().is_none());
-    }
-
-    #[test]
-    fn get_hospital_by_id_returns_hospital_with_that_id() {
-        let id = 1;
-        let expected = Hospital::new("Foo").with_id(id);
-        let sut = InMemoryHospitalRepository::containing(&vec![expected.clone()]);
-
-        let result = sut.get_hospital(&By::Id(id));
-
-        assert!(result.is_ok());
-        let ok_result = result.unwrap();
-        assert!(ok_result.is_some());
-        assert_eq!(expected, ok_result.unwrap());
     }
 
     #[test]
@@ -304,7 +255,7 @@ pub mod tests {
 
     #[test]
     fn add_patient_to_hospital_given_invalid_selector_returns_error() {
-        let selector = By::Id(1);
+        let selector = By::Name(String::from("Bar"));
         let patient = Patient::new("Foo");
         let mut sut = InMemoryHospitalRepository::empty();
 
@@ -345,7 +296,7 @@ pub mod tests {
     fn remove_patient_from_hospital_given_invalid_hospital_returns_error() {
         let mut sut = InMemoryHospitalRepository::empty();
 
-        let result = sut.remove_patient_from_hospital(1, &By::Id(1));
+        let result = sut.remove_patient_from_hospital(1, &By::Name(String::from("bar")));
 
         assert!(result.is_err());
     }

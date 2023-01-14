@@ -1,8 +1,8 @@
 // implements HospitalRepository for an MSSQL database
 
-use std::fs::{File, read_to_string};
+use std::fs::read_to_string;
 
-use tiberius::{Client, error::Error, ExecuteResult};
+use tiberius::{Client, ExecuteResult};
 use tokio::net::windows::named_pipe::NamedPipeClient;
 use tokio_util::compat::Compat;
 
@@ -32,15 +32,15 @@ impl HospitalRepository for DatabaseHospitalRepository {
         todo!()
     }
 
-    fn get_hospital(&self, by: &crate::core::hospital_repository::By) -> Result<Option<Hospital>, crate::core::hospital_repository::RepositoryError> {
+    fn get_hospital(&self, _by: &By) -> Result<Option<Hospital>, RepositoryError> {
         todo!()
     }
 
-    fn add_patient_to_hospital(&mut self, by: &crate::core::hospital_repository::By, patient: Patient) -> Result<Hospital, crate::core::hospital_repository::RepositoryError> {
+    fn add_patient_to_hospital(&mut self, _by: &By, _patient: Patient) -> Result<Hospital, RepositoryError> {
         todo!()
     }
 
-    fn remove_patient_from_hospital(&mut self, patient_id: u32, hospital_selector: &By) -> Result<Hospital, RepositoryError> {
+    fn remove_patient_from_hospital(&mut self, _patient_id: u32, _hospital_selector: &By) -> Result<Hospital, RepositoryError> {
         todo!()
     }
 }
