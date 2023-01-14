@@ -34,7 +34,7 @@ pub fn create_config_from_env() -> Result<Config, Box<dyn std::error::Error>> {
 pub async fn create_client(
     mssql_config: Config
 ) -> Result<Client<Compat<NamedPipeClient>>, Error> {
-    let pipe_name = r"\\.\pipe\LOCALDB#1D1E0128\tsql\query"; // todo env var
+    let pipe_name = r"\\.\pipe\LOCALDB#AC3DE11D\tsql\query"; // todo env var
     let pipe = ClientOptions::new().open(pipe_name)?;
     let connection = Client::connect(mssql_config, pipe.compat_write()).await?;
 

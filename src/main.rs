@@ -11,7 +11,7 @@ use actix_web::{
 use actix_web_httpauth::middleware::HttpAuthentication;
 use crate::{
     core::service_provider::ServiceProvider,
-    infrastructure::{routes::configure_hospital_routes, authentication::jwt::{jwt_auth_middleware, configure_jwt_routes}, database::connection::{create_config_from_env, create_client}}
+    infrastructure::{routes::configure_hospital_routes, authentication::jwt::{jwt_auth_middleware, configure_jwt_routes}, database::{connection::{create_config_from_env, create_client}, database_repository::DatabaseHospitalRepository}}
 };
 
 #[actix_web::main]
@@ -23,13 +23,10 @@ async fn main() -> std::io::Result<()> { // "()" is essentially "null"
         Err(ref error) => println!("Error creating MSSQL client: {:#?}", error)
     }
 
-    let mut c = client.unwrap();
-    let q = c.query("SELECT name FROM master.sys.databases;", &[]).await;
-    let query_result = q.unwrap().into_first_result().await.unwrap();
-    for row in query_result {
-        println!("Row: {:#?}", row);
-    }
-
+    let c = client.unwrap();
+    let  mut repo = DatabaseHospitalRepository::new(c);
+    let r = repo.setup().await;
+    println!("Setup result: {:#?}", r);
     /*
     let db_connection_pool = make_db_pool().await;
     println!("DB connection pool: {:#?}", db_connection_pool);
@@ -57,37 +54,3 @@ async fn main() -> std::io::Result<()> { // "()" is essentially "null"
         .run()
         .await
 }
-
-
-/*
-trait Demo {
-
-}
-
-struct A {
-
-}
-
-impl Demo for A {
-    
-}
-
-struct B {
-
-}
-
-impl Demo for B {
-
-}
-
-fn pick_demo<T>(use_a: bool) -> Box<T> 
-where
-    T: Demo
-{
-    if use_a {
-        Box::new(A {})
-    } else {
-        Box::new(B {})
-    }
-}
-*/

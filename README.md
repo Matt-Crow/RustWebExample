@@ -1,6 +1,8 @@
 # Rust Web Example
 
 An example web application using Rust for the backend.
+TODO document how to set up DB.
+Need to specify default schema of "rust" for Tiberius user.
 
 ## Environment Variables
 
