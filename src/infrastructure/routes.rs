@@ -45,7 +45,7 @@ async fn get_hospital_by_name(
     let mutex = services.hospitals().lock();
     let getter = mutex.unwrap();
 
-    match getter.get_hospital_by_name(&name) {
+    match getter.get_hospital_by_name(&name).await {
         Ok(maybe_hospital) => match maybe_hospital {
             Some(hospital) => Ok(Json(hospital)),
             None => Err(ErrorNotFound(format!("Invalid hospital name: {}", name)))        
@@ -64,7 +64,7 @@ async fn admit_patient(
     let mutex = services.hospitals().lock();
     let mut updater = mutex.unwrap();
 
-    match updater.admit_patient_to_hospital(patient.0, &hospital_name) {
+    match updater.admit_patient_to_hospital(patient.0, &hospital_name).await {
         Ok(hospital) => Ok(Json(hospital)),
         Err(e) => Err(ErrorInternalServerError(e))
     }
@@ -79,7 +79,7 @@ async fn unadmit_patient(
     let hospital_name = &path.0;
     let patient_id = path.1;
 
-    match deleter.unadmit_patient_from_hospital(patient_id, hospital_name) {
+    match deleter.unadmit_patient_from_hospital(patient_id, hospital_name).await {
         Ok(_) => Ok(HttpResponse::NoContent().body("")),
         Err(e) => Err(ErrorInternalServerError(e))
     }

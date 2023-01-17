@@ -1,6 +1,5 @@
 use std::{fmt::Display, sync::Mutex, collections::HashMap};
 use async_trait::async_trait;
-use futures_util::Future;
 use serde::{Serialize, Deserialize};
 use super::hospital_models::{Hospital, Patient};
 
@@ -52,30 +51,17 @@ pub trait HospitalRepository: Send + Sync { // must be safe to have multiple thr
     /// an error if applicable
     async fn get_all_hospitals(&mut self) -> Result<Vec<Hospital>, NewRepositoryError>;
 
-    /// returns a single hospital according to the given criteria, or None if no
-    /// hospital matches, or returns an error when applicable
-    fn get_hospital(&self, by: &By) -> Result<Option<Hospital>, RepositoryError>;
+    /// returns a single hospital with the given name, or returns an error when 
+    /// applicable. Note that this returns None if no such hospital exists
+    async fn get_hospital(&self, name: &str) -> Result<Option<Hospital>, NewRepositoryError>;
 
     /// adds the given patient to a hospital, if able. Returns an error if the
     /// hospital is not already stored
-    fn add_patient_to_hospital(&mut self, by: &By, patient: Patient) -> Result<Hospital, RepositoryError>;
+    async fn add_patient_to_hospital(&mut self, hospital_name: &str, patient: Patient) -> Result<Hospital, NewRepositoryError>;
 
     /// removes the given patient from the given hospital. Returns an error if
     /// the hospital is not stored. Note this method should be idempotent.
-    fn remove_patient_from_hospital(&mut self, patient_id: u32, hospital_selector: &By) -> Result<Hospital, RepositoryError>;
-}
-
-#[derive(Debug)]
-pub enum By {
-    Name(String)
-}
-
-impl Display for By {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            By::Name(name) => write!(f, "Hospital with name {}", name)
-        }
-    }
+    async fn remove_patient_from_hospital(&mut self, patient_id: u32, hospital_name: &str) -> Result<Hospital, NewRepositoryError>;
 }
 
 pub struct InMemoryHospitalRepository {
@@ -141,30 +127,26 @@ impl HospitalRepository for InMemoryHospitalRepository {
         }
     }
 
-    fn get_hospital(&self, by: &By) -> Result<Option<Hospital>, RepositoryError> {
+    async fn get_hospital(&self, name: &str) -> Result<Option<Hospital>, NewRepositoryError> {
         let mutex = &self.hospitals;
         let hospitals = mutex.lock().unwrap();
 
-        match by {
-            By::Name(ref name) => {
-                let sanitized = Self::sanitize_name(name);
-                let index_mutex = self.name_to_id.lock();
-                let index = index_mutex.unwrap();
+        let sanitized = Self::sanitize_name(name);
+        let index_mutex = self.name_to_id.lock();
+        let index = index_mutex.unwrap();
 
-                if index.contains_key(&sanitized) {
-                    let id = index.get(&sanitized).unwrap();
-                    Ok(Some(hospitals.get(id).unwrap().to_owned()))
-                } else {
-                    Ok(None)
-                }
-            }
+        if index.contains_key(&sanitized) {
+            let id = index.get(&sanitized).unwrap();
+            Ok(Some(hospitals.get(id).unwrap().to_owned()))
+        } else {
+            Ok(None)
         }
     }
 
-    fn add_patient_to_hospital(&mut self, by: &By, patient: Patient) -> Result<Hospital, RepositoryError>{
-        let maybe_hospital = self.get_hospital(by)?;
+    async fn add_patient_to_hospital(&mut self, hospital_name: &str, patient: Patient) -> Result<Hospital, NewRepositoryError>{
+        let maybe_hospital = self.get_hospital(hospital_name).await?;
         if maybe_hospital.is_none() {
-            return Err(RepositoryError::new(&format!("Invalid selector: {}", by)));
+            return Err(NewRepositoryError::Other(format!("Invalid hospital name: \"{}\"", hospital_name)));
         }
         let mut hospital = maybe_hospital.unwrap();
 
@@ -184,8 +166,8 @@ impl HospitalRepository for InMemoryHospitalRepository {
         Ok(hospital)
     }
 
-    fn remove_patient_from_hospital(&mut self, patient_id: u32, hospital_selector: &By) -> Result<Hospital, RepositoryError> {
-        let hospital = self.get_hospital(hospital_selector)?;
+    async fn remove_patient_from_hospital(&mut self, patient_id: u32, hospital_name: &str) -> Result<Hospital, NewRepositoryError> {
+        let hospital = self.get_hospital(hospital_name).await?;
 
         match hospital {
             Some(mut h) => {
@@ -193,7 +175,7 @@ impl HospitalRepository for InMemoryHospitalRepository {
                 self.insert(&h);
                 Ok(h)
             },
-            None => Err(RepositoryError::new(&format!("Invalid selector: {}", hospital_selector)))
+            None => Err(NewRepositoryError::other(&format!("Invalid hospital name: \"{}\"", hospital_name)))
         }
     }
 }
@@ -240,23 +222,23 @@ pub mod tests {
         assert!(found.contains(&h2));
     }
 
-    #[test]
-    fn get_hospital_given_no_matches_returns_none() {
+    #[tokio::test]
+    async fn get_hospital_given_no_matches_returns_none() {
         let sut = InMemoryHospitalRepository::empty();
 
-        let result = sut.get_hospital(&By::Name(String::from("foo")));
+        let result = sut.get_hospital("foo").await;
 
         assert!(result.is_ok());
         assert!(result.unwrap().is_none());
     }
 
-    #[test]
-    fn get_hospital_by_name_returns_hospital_with_that_name() {
+    #[tokio::test]
+    async fn get_hospital_by_name_returns_hospital_with_that_name() {
         let name = "Foo";
         let expected = Hospital::new(name).with_id(1); // needs ID for equality
         let sut = InMemoryHospitalRepository::containing(&vec![expected.clone()]);
 
-        let result = sut.get_hospital(&By::Name(name.to_owned()));
+        let result = sut.get_hospital(name).await;
         
         assert!(result.is_ok());
         let ok_result = result.unwrap();
@@ -264,13 +246,13 @@ pub mod tests {
         assert_eq!(expected, ok_result.unwrap());
     }
 
-    #[test]
-    fn get_hospital_by_name_is_case_insensitive() {
+    #[tokio::test]
+    async fn get_hospital_by_name_is_case_insensitive() {
         let name = "Foo";
         let expected = Hospital::new(name).with_id(1);
         let sut = InMemoryHospitalRepository::containing(&vec![expected.clone()]);
 
-        let result = sut.get_hospital(&By::Name(name.to_uppercase()));
+        let result = sut.get_hospital(&name.to_uppercase()).await;
 
         assert!(result.is_ok());
         let ok_result = result.unwrap();
@@ -278,67 +260,67 @@ pub mod tests {
         assert_eq!(expected, ok_result.unwrap());
     }
 
-    #[test]
-    fn add_patient_to_hospital_given_invalid_selector_returns_error() {
-        let selector = By::Name(String::from("Bar"));
+    #[tokio::test]
+    async fn add_patient_to_hospital_given_invalid_selector_returns_error() {
+        let selector = "Bar";
         let patient = Patient::new("Foo");
         let mut sut = InMemoryHospitalRepository::empty();
 
-        let result = sut.add_patient_to_hospital(&selector, patient);
+        let result = sut.add_patient_to_hospital(selector, patient).await;
 
         assert!(result.is_err());
     }
 
-    #[test]
-    fn add_patient_to_hospital_given_valid_selector_updates_hospital() {
+    #[tokio::test]
+    async fn add_patient_to_hospital_given_valid_selector_updates_hospital() {
         let name = "Foo";
         let hospital = Hospital::new(name);
         let patient = Patient::new("Bar").with_id(1);
-        let selector = By::Name(name.to_owned());
+        let selector = name;
         let mut sut = InMemoryHospitalRepository::containing(&vec![hospital]);
 
-        let result = sut.add_patient_to_hospital(&selector, patient.clone());
+        let result = sut.add_patient_to_hospital(selector, patient.clone()).await;
 
         assert!(result.is_ok());
         assert!(result.unwrap().has_patient(&patient));
     }
 
-    #[test]
-    fn add_patient_to_hospital_sets_patient_id() {
+    #[tokio::test]
+    async fn add_patient_to_hospital_sets_patient_id() {
         let name = "Foo";
         let hospital = Hospital::new(name);
         let patient = Patient::new("Bar");
-        let selector = By::Name(name.to_owned());
+        let selector = name;
         let mut sut = InMemoryHospitalRepository::containing(&vec![hospital]);
 
-        let result = sut.add_patient_to_hospital(&selector, patient.clone());
+        let result = sut.add_patient_to_hospital(selector, patient.clone()).await;
 
         assert!(result.is_ok());
         assert!(result.unwrap().patients().iter().all(|p| p.id().is_some()));
     }
 
-    #[test]
-    fn remove_patient_from_hospital_given_invalid_hospital_returns_error() {
+    #[tokio::test]
+    async fn remove_patient_from_hospital_given_invalid_hospital_returns_error() {
         let mut sut = InMemoryHospitalRepository::empty();
 
-        let result = sut.remove_patient_from_hospital(1, &By::Name(String::from("bar")));
+        let result = sut.remove_patient_from_hospital(1, "bar").await;
 
         assert!(result.is_err());
     }
 
-    #[test]
-    fn remove_patient_from_hospital_when_patient_not_admitted_is_ok() {
+    #[tokio::test]
+    async fn remove_patient_from_hospital_when_patient_not_admitted_is_ok() {
         let name = "Foo";
         let hospital = Hospital::new(name);
         let mut sut = InMemoryHospitalRepository::containing_single(hospital);
 
-        let result = sut.remove_patient_from_hospital(1, &By::Name(name.to_owned()));
+        let result = sut.remove_patient_from_hospital(1, name).await;
 
         assert!(result.is_ok());
     }
 
-    #[test]
-    fn remove_patient_from_hospital_when_patient_admitted_removes_them() {
+    #[tokio::test]
+    async fn remove_patient_from_hospital_when_patient_admitted_removes_them() {
         let patient_id = 1;
         let patient = Patient::new("Bar").with_id(patient_id);
 
@@ -350,8 +332,8 @@ pub mod tests {
 
         let result = sut.remove_patient_from_hospital(
             patient_id, 
-            &By::Name(hospital_name.to_owned())
-        );
+            hospital_name
+        ).await;
 
         assert!(result.is_ok());
         assert!(!result.unwrap().has_patient(&patient));

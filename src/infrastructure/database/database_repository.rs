@@ -7,12 +7,12 @@
 use std::{fs::read_to_string, collections::HashMap};
 
 use async_trait::async_trait;
-use futures_util::{Future, StreamExt, future, TryStreamExt};
+use futures_util::{StreamExt, future, TryStreamExt};
 use tiberius::{Client, ExecuteResult};
 use tokio::net::windows::named_pipe::NamedPipeClient;
 use tokio_util::compat::Compat;
 
-use crate::core::{hospital_repository::{HospitalRepository, By, RepositoryError, NewRepositoryError}, hospital_models::{Hospital, Patient}};
+use crate::core::{hospital_repository::{HospitalRepository, RepositoryError, NewRepositoryError}, hospital_models::{Hospital, Patient}};
 
 pub struct DatabaseHospitalRepository {
     client: Client<Compat<NamedPipeClient>>
@@ -87,15 +87,15 @@ impl HospitalRepository for DatabaseHospitalRepository {
         Ok(hm.values().map(|href| href.to_owned()).collect())
     }
 
-    fn get_hospital(&self, _by: &By) -> Result<Option<Hospital>, RepositoryError> {
+    async fn get_hospital(&self, _name: &str) -> Result<Option<Hospital>, NewRepositoryError> {
         todo!()
     }
 
-    fn add_patient_to_hospital(&mut self, _by: &By, _patient: Patient) -> Result<Hospital, RepositoryError> {
+    async fn add_patient_to_hospital(&mut self, _hospital_name: &str, _patient: Patient) -> Result<Hospital, NewRepositoryError> {
         todo!()
     }
 
-    fn remove_patient_from_hospital(&mut self, _patient_id: u32, _hospital_selector: &By) -> Result<Hospital, RepositoryError> {
+    async fn remove_patient_from_hospital(&mut self, _patient_id: u32, _hospital_name: &str) -> Result<Hospital, NewRepositoryError> {
         todo!()
     }
 }

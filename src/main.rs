@@ -3,6 +3,8 @@
 mod core; // can declare modules as public in case other programs need them
 mod infrastructure;
 
+use std::env;
+
 use actix_web::{HttpServer, App, web};
 use actix_web_httpauth::middleware::HttpAuthentication;
 use crate::{
@@ -19,8 +21,12 @@ async fn main() -> std::io::Result<()> {
     let mut repo = DatabaseHospitalRepository::new(mssql_client);
     let a = repo.get_all_hospitals().await;
     println!("All: {:#?}", a);
-    //let r = repo.setup().await;
-    //println!("Setup result: {:#?}", r);
+
+    let args: Vec<String> = env::args().collect();
+    if args.iter().any(|arg| arg == "--setup") {
+        let r = repo.setup().await;
+        println!("Setup result: {:#?}", r);
+    }
     /*
     let db_connection_pool = make_db_pool().await;
     println!("DB connection pool: {:#?}", db_connection_pool);
