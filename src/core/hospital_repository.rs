@@ -1,4 +1,6 @@
 use std::{fmt::Display, sync::Mutex, collections::HashMap};
+use async_trait::async_trait;
+use futures_util::Future;
 use serde::{Serialize, Deserialize};
 use super::hospital_models::{Hospital, Patient};
 
@@ -21,12 +23,34 @@ impl Display for RepositoryError {
     }
 }
 
+#[derive(Debug)]
+pub enum NewRepositoryError {
+    Other(String),
+    Tiberius(tiberius::error::Error)
+}
+
+impl NewRepositoryError {
+    pub fn other(message: &str) -> Self {
+        NewRepositoryError::Other(String::from(message))
+    }
+}
+
+impl Display for NewRepositoryError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            NewRepositoryError::Other(message) => write!(f, "Repository Error: {}", message),
+            NewRepositoryError::Tiberius(inner) => write!(f, "Tiberius Error: {}", inner)
+        }
+    }
+}
+
 /// designates something as an interface into a backing store of hospitals
+#[async_trait] // stable Rust does not yet allow async function in traits, which this fixes
 pub trait HospitalRepository: Send + Sync { // must be safe to have multiple threads accessing at the same time
 
     /// retrieves all hospitals from the backing store, then returns them, or
     /// an error if applicable
-    fn get_all_hospitals(&self) -> Result<Vec<Hospital>, RepositoryError>;
+    async fn get_all_hospitals(&mut self) -> Result<Vec<Hospital>, NewRepositoryError>;
 
     /// returns a single hospital according to the given criteria, or None if no
     /// hospital matches, or returns an error when applicable
@@ -105,14 +129,15 @@ impl InMemoryHospitalRepository {
     }
 }
 
+#[async_trait]
 impl HospitalRepository for InMemoryHospitalRepository {
-    fn get_all_hospitals(&self) -> Result<Vec<Hospital>, RepositoryError> {
+    async fn get_all_hospitals(&mut self) -> Result<Vec<Hospital>, NewRepositoryError> {
         let mutex = &self.hospitals;
         let hospitals = mutex.lock();
 
         match hospitals {
             Ok(all) => Ok(all.values().cloned().collect()),
-            Err(error) => Err(RepositoryError::new(&format!("Mutex error: {}", error)))
+            Err(error) => Err(NewRepositoryError::other(&format!("Mutex error: {}", error)))
         }
     }
 
@@ -189,24 +214,24 @@ pub mod tests {
         }
     }
 
-    #[test]
-    fn get_all_hospitals_given_empty_has_zero_length() {
-        let sut = InMemoryHospitalRepository::empty();
+    #[tokio::test]
+    async fn get_all_hospitals_given_empty_has_zero_length() {
+        let mut sut = InMemoryHospitalRepository::empty();
 
-        let result = sut.get_all_hospitals();
+        let result = sut.get_all_hospitals().await;
 
         assert!(result.is_ok());
         assert!(result.unwrap().is_empty());
     }
 
-    #[test]
-    fn get_all_hospitals_containing_hospitals_returns_them() {
+    #[tokio::test]
+    async fn get_all_hospitals_containing_hospitals_returns_them() {
         let h1 = Hospital::new("Foo").with_id(1);
         let h2 = Hospital::new("Bar").with_id(2);
         let hospitals = vec![h1.clone(), h2.clone()];
-        let sut = InMemoryHospitalRepository::containing(&hospitals);
+        let mut sut = InMemoryHospitalRepository::containing(&hospitals);
 
-        let result = sut.get_all_hospitals();
+        let result = sut.get_all_hospitals().await;
 
         assert!(result.is_ok());
 

@@ -1,4 +1,4 @@
-use super::{hospital_models::{Hospital, Patient}, hospital_repository::{RepositoryError, HospitalRepository, By}};
+use super::{hospital_models::{Hospital, Patient}, hospital_repository::{RepositoryError, HospitalRepository, By, NewRepositoryError}};
 
 pub struct HospitalService {
     repository: Box<dyn HospitalRepository + 'static>
@@ -11,8 +11,8 @@ impl HospitalService {
         }
     }
 
-    pub fn get_all_hospitals(&self) -> Result<Vec<Hospital>, RepositoryError> {
-        self.repository.get_all_hospitals()
+    pub async fn get_all_hospitals(&mut self) -> Result<Vec<Hospital>, NewRepositoryError> {
+        self.repository.get_all_hospitals().await
     }
 
     pub fn get_hospital_by_name(&self, name: &str) -> Result<Option<Hospital>, RepositoryError> {
@@ -33,6 +33,7 @@ pub mod tests {
     use crate::core::{hospital_repository::By, hospital_models::Patient};
 
     use super::*;
+    use async_trait::async_trait;
     use mockall::mock;
 
     mock! {
@@ -40,24 +41,25 @@ pub mod tests {
 
         }
 
+        #[async_trait]
         impl HospitalRepository for Dummy {
-            fn get_all_hospitals(&self) -> Result<Vec<Hospital>, RepositoryError>;
+            async fn get_all_hospitals(&mut self) -> Result<Vec<Hospital>, NewRepositoryError>;
             fn get_hospital(&self, by: &By) -> Result<Option<Hospital>, RepositoryError>;
             fn add_patient_to_hospital(&mut self, by: &By, patient: Patient) -> Result<Hospital, RepositoryError>;
             fn remove_patient_from_hospital(&mut self, patient_id: u32, hospital_selector: &By) -> Result<Hospital, RepositoryError>;
         }
     }
 
-    #[test]
-    fn get_all_hospitals_forwards_to_repository() {
+    #[tokio::test]
+    async fn get_all_hospitals_forwards_to_repository() {
         let mut mock = MockDummy::new();
         mock
             .expect_get_all_hospitals()
             .once()
             .returning(|| Ok(Vec::new()));
-        let sut = HospitalService::new(mock);
+        let mut sut = HospitalService::new(mock);
 
-        let result = sut.get_all_hospitals();
+        let result = sut.get_all_hospitals().await;
 
         assert!(result.is_ok());
     }

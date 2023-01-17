@@ -6,7 +6,7 @@ mod infrastructure;
 use actix_web::{HttpServer, App, web};
 use actix_web_httpauth::middleware::HttpAuthentication;
 use crate::{
-    core::service_provider::ServiceProvider,
+    core::{service_provider::ServiceProvider, hospital_repository::HospitalRepository},
     infrastructure::{routes::configure_hospital_routes, authentication::jwt::{jwt_auth_middleware, configure_jwt_routes}, database::{connection::create_client_from_env, database_repository::DatabaseHospitalRepository}}
 };
 
@@ -17,8 +17,10 @@ async fn main() -> std::io::Result<()> {
         .expect("Failed to create mssql client!");
     
     let mut repo = DatabaseHospitalRepository::new(mssql_client);
-    let r = repo.setup().await;
-    println!("Setup result: {:#?}", r);
+    let a = repo.get_all_hospitals().await;
+    println!("All: {:#?}", a);
+    //let r = repo.setup().await;
+    //println!("Setup result: {:#?}", r);
     /*
     let db_connection_pool = make_db_pool().await;
     println!("DB connection pool: {:#?}", db_connection_pool);

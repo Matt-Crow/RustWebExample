@@ -30,9 +30,9 @@ async fn get_all_hospitals(
     // actix web has its own Result type, not to be confused with Rust's
     // since the app state is shared across threads, need mutex to use it
     let mutex = services.hospitals();
-    let getter = mutex.lock().unwrap();
+    let mut getter = mutex.lock().unwrap();
 
-    match getter.get_all_hospitals() {
+    match getter.get_all_hospitals().await {
         Ok(hospitals) => Ok(Json(hospitals)),
         Err(error) => Err(ErrorInternalServerError(error))
     }

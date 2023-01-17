@@ -11,13 +11,13 @@ serde = { version = "1.0", features = ["derive"] }
 tiberius = "0.11.3"
 tokio = { version = "1.23.0", features = ["full"] }
 reqwest = "0.11.13"
-package = "0.0.0"
 actix-web-httpauth = "0.8.0"
-futures-util = "0.3.25"
 jsonwebtoken = "8.2.0"
 chrono = "0.4.23"
 bb8 = "0.8.0"
 bb8-tiberius = "0.13.0"
+futures-util = "0.3.25"
+async-trait = "0.1.61"
 
 # https://github.com/prisma/tiberius/issues/145#issuecomment-829044670
 [dependencies.tokio-util]
