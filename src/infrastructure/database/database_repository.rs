@@ -12,7 +12,7 @@ use tiberius::{Client, ExecuteResult};
 use tokio::net::windows::named_pipe::NamedPipeClient;
 use tokio_util::compat::Compat;
 
-use crate::core::{hospital_repository::{HospitalRepository, RepositoryError, NewRepositoryError}, hospital_models::{Hospital, Patient}};
+use crate::core::{hospital_repository::{HospitalRepository, RepositoryError}, hospital_models::{Hospital, Patient}};
 
 pub struct DatabaseHospitalRepository {
     client: Client<Compat<NamedPipeClient>>
@@ -26,9 +26,9 @@ impl DatabaseHospitalRepository {
     }
 
     pub async fn setup(&mut self) -> Result<ExecuteResult, RepositoryError> {
-        let content = read_to_string("./setup.sql").map_err(|e| RepositoryError::new(&e.to_string()))?;
+        let content = read_to_string("./setup.sql").map_err(|e| RepositoryError::other(&e.to_string()))?;
         println!("Executing setup: \n{}", content);
-        let r = self.client.execute(content, &[]).await.map_err(|e| RepositoryError::new(&e.to_string()))?;
+        let r = self.client.execute(content, &[]).await.map_err(|e| RepositoryError::other(&e.to_string()))?;
         Ok(r)
     }
 }
@@ -43,7 +43,7 @@ struct HospitalPatientMapping {
 
 #[async_trait]
 impl HospitalRepository for DatabaseHospitalRepository {
-    async fn get_all_hospitals(&mut self) -> Result<Vec<Hospital>, NewRepositoryError> {
+    async fn get_all_hospitals(&mut self) -> Result<Vec<Hospital>, RepositoryError> {
         let q = "
             SELECT h.HospitalID 'Hospital ID', h.Name 'Hospital Name', p.PatientID 'Patient ID', p.Name 'Patient Name'
             FROM rust.Hospitals as h
@@ -55,7 +55,7 @@ impl HospitalRepository for DatabaseHospitalRepository {
 
         let query_result = self.client.simple_query(q)
             .await
-            .map_err(NewRepositoryError::tiberius)?;
+            .map_err(RepositoryError::tiberius)?;
         
         // map relational to HospitalPatientMapping
         let rows = query_result
@@ -90,7 +90,7 @@ impl HospitalRepository for DatabaseHospitalRepository {
         Ok(hm.values().map(|href| href.to_owned()).collect())
     }
 
-    async fn get_hospital(&mut self, name: &str) -> Result<Option<Hospital>, NewRepositoryError> {
+    async fn get_hospital(&mut self, name: &str) -> Result<Option<Hospital>, RepositoryError> {
         let q = "
             SELECT h.HospitalID 'Hospital ID', h.Name 'Hospital Name', p.PatientID 'Patient ID', p.Name 'Patient Name'
               FROM rust.Hospitals as h
@@ -103,7 +103,7 @@ impl HospitalRepository for DatabaseHospitalRepository {
 
         let query_result = self.client.query(q, &[&name.to_uppercase()])
             .await
-            .map_err(NewRepositoryError::tiberius)?;
+            .map_err(RepositoryError::tiberius)?;
         
         let rows = query_result
             .into_row_stream()
@@ -136,7 +136,7 @@ impl HospitalRepository for DatabaseHospitalRepository {
         Ok(Some(h))
     }
 
-    async fn add_patient_to_hospital(&mut self, hospital_name: &str, patient: Patient) -> Result<Hospital, NewRepositoryError> {
+    async fn add_patient_to_hospital(&mut self, hospital_name: &str, patient: Patient) -> Result<Hospital, RepositoryError> {
         let q = "
             INSERT INTO rust.Patients (Name, HospitalID)
             VALUES (@P1, (
@@ -149,14 +149,14 @@ impl HospitalRepository for DatabaseHospitalRepository {
 
         let _result = self.client.execute(q, &[&patient.name(), &hospital_name.to_uppercase()])
             .await
-            .map_err(NewRepositoryError::tiberius)?;
+            .map_err(RepositoryError::tiberius)?;
         
         self.get_hospital(hospital_name)
             .await?
-            .ok_or_else(|| NewRepositoryError::invalid_hospital_name(hospital_name))
+            .ok_or_else(|| RepositoryError::invalid_hospital_name(hospital_name))
     }
 
-    async fn remove_patient_from_hospital(&mut self, patient_id: u32, hospital_name: &str) -> Result<Hospital, NewRepositoryError> {
+    async fn remove_patient_from_hospital(&mut self, patient_id: u32, hospital_name: &str) -> Result<Hospital, RepositoryError> {
         let q = "
             DELETE FROM rust.Patients
              WHERE PatientID = @P1
@@ -170,10 +170,10 @@ impl HospitalRepository for DatabaseHospitalRepository {
 
         let _result = self.client.execute(q, &[&(patient_id as i32), &hospital_name.to_uppercase()])
             .await
-            .map_err(NewRepositoryError::tiberius)?;
+            .map_err(RepositoryError::tiberius)?;
 
         self.get_hospital(hospital_name)
             .await?
-            .ok_or_else(|| NewRepositoryError::invalid_hospital_name(hospital_name))
+            .ok_or_else(|| RepositoryError::invalid_hospital_name(hospital_name))
     }
 }
