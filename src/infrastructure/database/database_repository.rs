@@ -4,7 +4,7 @@
 // Rust ecosystem does not currently have an ORM for MSSQL, so we have to
 // manually construct the SQL queries ourselves.
 
-use std::{fs::read_to_string, collections::HashMap};
+use std::{fs::read_to_string, collections::{HashMap, hash_map::Entry::Vacant}};
 
 use async_trait::async_trait;
 use futures_util::{StreamExt, future, TryStreamExt};
@@ -55,7 +55,7 @@ impl HospitalRepository for DatabaseHospitalRepository {
 
         let query_result = self.client.simple_query(q)
             .await
-            .map_err(NewRepositoryError::Tiberius)?;
+            .map_err(NewRepositoryError::tiberius)?;
         
         // map relational to HospitalPatientMapping
         let rows = query_result
@@ -76,8 +76,8 @@ impl HospitalRepository for DatabaseHospitalRepository {
 
         let mut hm: HashMap<i32, Hospital> = HashMap::new();
         for row in rows {
-            if !hm.contains_key(&row.hospital_id) {
-                hm.insert(row.hospital_id, Hospital::new(&row.hospital_name).with_id(row.hospital_id.try_into().unwrap()));
+            if let Vacant(entry) = hm.entry(row.hospital_id) {
+                entry.insert(Hospital::new(&row.hospital_name).with_id(row.hospital_id.try_into().unwrap()));
             }
             if let (Some(id), Some(name)) = (row.patient_id, row.patient_name) {
                 let mut h = hm.get(&row.hospital_id).expect("Hospital with this ID exists by now").to_owned();
@@ -97,13 +97,13 @@ impl HospitalRepository for DatabaseHospitalRepository {
                    LEFT JOIN                   --include hospitals with no patients
                    rust.Patients as p
                    ON h.HospitalID = p.HospitalID
-             WHERE UPPER(CONVERT(varchar(max), h.Name)) = @P1
+             WHERE UPPER(h.Name) = @P1
             ;
         ";
 
         let query_result = self.client.query(q, &[&name.to_uppercase()])
             .await
-            .map_err(NewRepositoryError::Tiberius)?;
+            .map_err(NewRepositoryError::tiberius)?;
         
         let rows = query_result
             .into_row_stream()
@@ -121,7 +121,7 @@ impl HospitalRepository for DatabaseHospitalRepository {
             .collect::<Vec<HospitalPatientMapping>>()
             .await;
         
-        if rows.len() == 0 {
+        if rows.is_empty() {
             // hospital does not exist
             return Ok(None);
         }
@@ -142,19 +142,18 @@ impl HospitalRepository for DatabaseHospitalRepository {
             VALUES (@P1, (
                 SELECT HospitalID
                   FROM rust.Hospitals
-                 WHERE UPPER(CONVERT(varchar(max), Name)) = @P2
+                 WHERE UPPER(Name) = @P2
             ))
             ;
         ";
 
         let _result = self.client.execute(q, &[&patient.name(), &hospital_name.to_uppercase()])
             .await
-            .map_err(NewRepositoryError::Tiberius)?;
+            .map_err(NewRepositoryError::tiberius)?;
         
-        match self.get_hospital(hospital_name).await? {
-            Some(h) => Ok(h),
-            None => Err(NewRepositoryError::Other(format!("Invalid hospital name: \"{}\"", hospital_name)))
-        }
+        self.get_hospital(hospital_name)
+            .await?
+            .ok_or_else(|| NewRepositoryError::invalid_hospital_name(hospital_name))
     }
 
     async fn remove_patient_from_hospital(&mut self, patient_id: u32, hospital_name: &str) -> Result<Hospital, NewRepositoryError> {
@@ -164,18 +163,17 @@ impl HospitalRepository for DatabaseHospitalRepository {
                AND HospitalID = (
                    SELECT HospitalID
                      FROM rust.Hospitals
-                    WHERE UPPER(CONVERT(varchar(max), Name)) = @P2
+                    WHERE UPPER(Name) = @P2
                )
             ;
         ";
 
         let _result = self.client.execute(q, &[&(patient_id as i32), &hospital_name.to_uppercase()])
             .await
-            .map_err(NewRepositoryError::Tiberius)?;
+            .map_err(NewRepositoryError::tiberius)?;
 
-        match self.get_hospital(hospital_name).await? {
-            Some(h) => Ok(h),
-            None => Err(NewRepositoryError::Other(format!("Invalid hospital name: \"{}\"", hospital_name)))
-        }
+        self.get_hospital(hospital_name)
+            .await?
+            .ok_or_else(|| NewRepositoryError::invalid_hospital_name(hospital_name))
     }
 }

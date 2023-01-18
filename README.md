@@ -47,7 +47,7 @@ This app demonstrates many of the basic features common to most REST APIs.
    ```
 8. `GET localhost:8080/api/v1/hospitals/napa`, then locate John Brown's ID
 9. unadmit John Brown using `DELETE localhost:8080/api/v1/hospitals/napa/ID`,
-   where `ID` is John Brown's ID from the previous step.
+   where `ID` is John Brown's ID from the previous step. You should receive `204 No Content`.
 10. `GET localhost:8080/api/v1/hospitals/napa` to confirm John Brown has been
     unadmitted.
 

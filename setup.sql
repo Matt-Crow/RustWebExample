@@ -8,7 +8,7 @@ IF OBJECT_ID(N'rust.Hospitals', N'U') IS NOT NULL
 
 CREATE TABLE rust.Hospitals (
 	HospitalID int IDENTITY(1, 1) PRIMARY KEY NOT NULL,
-	Name text NOT NULL
+	Name varchar(16) NOT NULL
 );
 
 TRUNCATE TABLE rust.Hospitals;
@@ -27,7 +27,7 @@ SET IDENTITY_INSERT rust.Hospitals OFF;
 
 CREATE TABLE rust.Patients (
 	PatientID int IDENTITY(1, 1) PRIMARY KEY NOT NULL,
-	Name text NOT NULL,
+	Name varchar(32) NOT NULL,
 	HospitalID int NOT NULL,
 	CONSTRAINT FK_Patients_Hospitals FOREIGN KEY (HospitalID)
 	                        REFERENCES rust.Hospitals (HospitalID)

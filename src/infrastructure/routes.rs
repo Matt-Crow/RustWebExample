@@ -30,7 +30,7 @@ async fn get_all_hospitals(
     // actix web has its own Result type, not to be confused with Rust's
     // since the app state is shared across threads, need mutex to use it
     let mutex = services.hospitals();
-    let mut getter = mutex.lock().unwrap();
+    let mut getter = mutex.lock().await;
 
     match getter.get_all_hospitals().await {
         Ok(hospitals) => Ok(Json(hospitals)),
@@ -42,8 +42,7 @@ async fn get_hospital_by_name(
     services: web::Data<ServiceProvider>,
     name: web::Path<String>
 ) -> actix_web::Result<Json<Hospital>> {
-    let mutex = services.hospitals().lock();
-    let mut getter = mutex.unwrap();
+    let mut getter = services.hospitals().lock().await;
 
     match getter.get_hospital_by_name(&name).await {
         Ok(maybe_hospital) => match maybe_hospital {
@@ -61,8 +60,7 @@ async fn admit_patient(
     hospital_name: web::Path<String>,
     patient: Json<Patient>
 ) -> actix_web::Result<Json<Hospital>> {
-    let mutex = services.hospitals().lock();
-    let mut updater = mutex.unwrap();
+    let mut updater = services.hospitals().lock().await;
 
     match updater.admit_patient_to_hospital(patient.0, &hospital_name).await {
         Ok(hospital) => Ok(Json(hospital)),
@@ -74,8 +72,7 @@ async fn unadmit_patient(
     services: web::Data<ServiceProvider>,
     path: web::Path<(String, u32)>,
 ) -> impl Responder {
-    let mutex = services.hospitals().lock();
-    let mut deleter = mutex.unwrap();
+    let mut deleter = services.hospitals().lock().await;
     let hospital_name = &path.0;
     let patient_id = path.1;
 

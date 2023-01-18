@@ -1,5 +1,7 @@
 // model structs are how the program represents the problem domain
 
+// todo use i32 for IDs
+
 // the serde (SERialize DEserialize) crate helps convert data to & from JSON
 use serde::{Serialize, Deserialize};
 
@@ -28,28 +30,8 @@ impl Hospital {
         }
     }
 
-    pub fn id(&self) -> Option<u32> {
-        self.id
-    }
-
-    pub fn name(&self) -> String {
-        self.name.to_owned()
-    }
-
-    pub fn patients(&self) -> Vec<Patient> {
-        self.patients.to_vec()
-    }
-
     pub fn add_patient(&mut self, patient: Patient) {
         self.patients.push(patient);
-    }
-
-    pub fn has_patient(&self, patient: &Patient) -> bool {
-        self.patients.contains(patient)
-    }
-
-    pub fn remove_patient_by_id(&mut self, id: u32) {
-        self.patients.retain(|p| p.id.is_some() && p.id.unwrap() != id);
     }
 }
 
@@ -95,10 +77,6 @@ impl Patient {
             id: Some(id),
             name: self.name.to_owned()
         }
-    }
-
-    pub fn id(&self) -> Option<u32> {
-        self.id
     }
 
     pub fn name(&self) -> String {

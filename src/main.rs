@@ -35,7 +35,7 @@ async fn main() -> std::io::Result<()> {
 
     // The Rust ecosystem does not appear to have a good Dependency Injection
     // framework, so we have to bundle together the service providers ourselves.
-    let sp = web::Data::new(ServiceProvider::default());
+    let sp = web::Data::new(ServiceProvider::new(repo));
 
     println!("Starting web server...");
     
