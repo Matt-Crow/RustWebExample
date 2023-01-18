@@ -43,7 +43,7 @@ async fn get_hospital_by_name(
     name: web::Path<String>
 ) -> actix_web::Result<Json<Hospital>> {
     let mutex = services.hospitals().lock();
-    let getter = mutex.unwrap();
+    let mut getter = mutex.unwrap();
 
     match getter.get_hospital_by_name(&name).await {
         Ok(maybe_hospital) => match maybe_hospital {

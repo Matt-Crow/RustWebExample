@@ -53,7 +53,7 @@ pub trait HospitalRepository: Send + Sync { // must be safe to have multiple thr
 
     /// returns a single hospital with the given name, or returns an error when 
     /// applicable. Note that this returns None if no such hospital exists
-    async fn get_hospital(&self, name: &str) -> Result<Option<Hospital>, NewRepositoryError>;
+    async fn get_hospital(&mut self, name: &str) -> Result<Option<Hospital>, NewRepositoryError>;
 
     /// adds the given patient to a hospital, if able. Returns an error if the
     /// hospital is not already stored
@@ -127,7 +127,7 @@ impl HospitalRepository for InMemoryHospitalRepository {
         }
     }
 
-    async fn get_hospital(&self, name: &str) -> Result<Option<Hospital>, NewRepositoryError> {
+    async fn get_hospital(&mut self, name: &str) -> Result<Option<Hospital>, NewRepositoryError> {
         let mutex = &self.hospitals;
         let hospitals = mutex.lock().unwrap();
 
@@ -224,7 +224,7 @@ pub mod tests {
 
     #[tokio::test]
     async fn get_hospital_given_no_matches_returns_none() {
-        let sut = InMemoryHospitalRepository::empty();
+        let mut sut = InMemoryHospitalRepository::empty();
 
         let result = sut.get_hospital("foo").await;
 
@@ -236,7 +236,7 @@ pub mod tests {
     async fn get_hospital_by_name_returns_hospital_with_that_name() {
         let name = "Foo";
         let expected = Hospital::new(name).with_id(1); // needs ID for equality
-        let sut = InMemoryHospitalRepository::containing(&vec![expected.clone()]);
+        let mut sut = InMemoryHospitalRepository::containing(&vec![expected.clone()]);
 
         let result = sut.get_hospital(name).await;
         
@@ -250,7 +250,7 @@ pub mod tests {
     async fn get_hospital_by_name_is_case_insensitive() {
         let name = "Foo";
         let expected = Hospital::new(name).with_id(1);
-        let sut = InMemoryHospitalRepository::containing(&vec![expected.clone()]);
+        let mut sut = InMemoryHospitalRepository::containing(&vec![expected.clone()]);
 
         let result = sut.get_hospital(&name.to_uppercase()).await;
 

@@ -100,6 +100,10 @@ impl Patient {
     pub fn id(&self) -> Option<u32> {
         self.id
     }
+
+    pub fn name(&self) -> String {
+        self.name.to_owned()
+    }
 }
 
 impl Clone for Patient {

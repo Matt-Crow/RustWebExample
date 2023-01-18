@@ -7,11 +7,13 @@ IF OBJECT_ID(N'rust.Hospitals', N'U') IS NOT NULL
 	DROP TABLE rust.Hospitals;
 
 CREATE TABLE rust.Hospitals (
-	HospitalID int PRIMARY KEY NOT NULL,
+	HospitalID int IDENTITY(1, 1) PRIMARY KEY NOT NULL,
 	Name text NOT NULL
 );
 
 TRUNCATE TABLE rust.Hospitals;
+
+SET IDENTITY_INSERT rust.Hospitals ON; -- allow script to set hospital IDs
 
 INSERT INTO rust.Hospitals (HospitalID, Name)
 VALUES
@@ -21,8 +23,10 @@ VALUES
 	(4, 'Napa'),
 	(5, 'Patton');
 
+SET IDENTITY_INSERT rust.Hospitals OFF;
+
 CREATE TABLE rust.Patients (
-	PatientID int PRIMARY KEY NOT NULL,
+	PatientID int IDENTITY(1, 1) PRIMARY KEY NOT NULL,
 	Name text NOT NULL,
 	HospitalID int NOT NULL,
 	CONSTRAINT FK_Patients_Hospitals FOREIGN KEY (HospitalID)
@@ -32,11 +36,11 @@ CREATE TABLE rust.Patients (
 
 TRUNCATE TABLE rust.Patients;
 
-INSERT INTO rust.Patients (PatientID, Name, HospitalID)
+INSERT INTO rust.Patients (Name, HospitalID)
 VALUES
-	(1, 'John Doe', 1),
-	(2, 'Jane Doe', 1),
-	(3, 'Bob Smith', 2);
+	('John Doe', 1),
+	('Jane Doe', 1),
+	('Bob Smith', 2);
 
 SELECT h.Name 'Hospital', ISNULL(p.Name, 'No patients') 'Patient' 
   FROM rust.Hospitals AS h

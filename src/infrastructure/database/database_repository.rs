@@ -58,16 +58,19 @@ impl HospitalRepository for DatabaseHospitalRepository {
             .map_err(NewRepositoryError::Tiberius)?;
         
         // map relational to HospitalPatientMapping
-        let rows = query_result.into_row_stream()
+        let rows = query_result
+            .into_row_stream()
             .into_stream()
-            .map_ok(|row| HospitalPatientMapping {
+            .filter_map(|ok_or_not| future::ready(match ok_or_not {
+                Ok(row) => Some(row),
+                Err(_) => None
+            })) // remove not-OK items
+            .map(|row| HospitalPatientMapping {
                 hospital_id: row.get(0).expect("hospital ID should be non-null"),
                 hospital_name: row.get::<&str, usize>(1).map(String::from).expect("hospital name should be non-null"),
                 patient_id: row.get(2),
                 patient_name: row.get::<&str, usize>(3).map(String::from)
             })
-            .filter(|something| future::ready(something.is_ok()))
-            .map(|ok| ok.unwrap())
             .collect::<Vec<HospitalPatientMapping>>()
             .await;
 
@@ -87,15 +90,92 @@ impl HospitalRepository for DatabaseHospitalRepository {
         Ok(hm.values().map(|href| href.to_owned()).collect())
     }
 
-    async fn get_hospital(&self, _name: &str) -> Result<Option<Hospital>, NewRepositoryError> {
-        todo!()
+    async fn get_hospital(&mut self, name: &str) -> Result<Option<Hospital>, NewRepositoryError> {
+        let q = "
+            SELECT h.HospitalID 'Hospital ID', h.Name 'Hospital Name', p.PatientID 'Patient ID', p.Name 'Patient Name'
+              FROM rust.Hospitals as h
+                   LEFT JOIN                   --include hospitals with no patients
+                   rust.Patients as p
+                   ON h.HospitalID = p.HospitalID
+             WHERE UPPER(CONVERT(varchar(max), h.Name)) = @P1
+            ;
+        ";
+
+        let query_result = self.client.query(q, &[&name.to_uppercase()])
+            .await
+            .map_err(NewRepositoryError::Tiberius)?;
+        
+        let rows = query_result
+            .into_row_stream()
+            .into_stream()
+            .filter_map(|ok_or_not| future::ready(match ok_or_not {
+                Ok(row) => Some(row),
+                Err(_) => None
+            })) // remove not-OK items
+            .map(|row| HospitalPatientMapping {
+                hospital_id: row.get(0).expect("hospital ID should be non-null"),
+                hospital_name: row.get::<&str, usize>(1).map(String::from).expect("hospital name should be non-null"),
+                patient_id: row.get(2),
+                patient_name: row.get::<&str, usize>(3).map(String::from)
+            })
+            .collect::<Vec<HospitalPatientMapping>>()
+            .await;
+        
+        if rows.len() == 0 {
+            // hospital does not exist
+            return Ok(None);
+        }
+
+        let mut h = Hospital::new(&rows[0].hospital_name).with_id(rows[0].hospital_id.try_into().unwrap());
+        for row in rows {
+            if let (Some(id), Some(name)) = (row.patient_id, row.patient_name) {
+                h.add_patient(Patient::new(&name).with_id(id.try_into().unwrap()));
+            }
+        }
+        
+        Ok(Some(h))
     }
 
-    async fn add_patient_to_hospital(&mut self, _hospital_name: &str, _patient: Patient) -> Result<Hospital, NewRepositoryError> {
-        todo!()
+    async fn add_patient_to_hospital(&mut self, hospital_name: &str, patient: Patient) -> Result<Hospital, NewRepositoryError> {
+        let q = "
+            INSERT INTO rust.Patients (Name, HospitalID)
+            VALUES (@P1, (
+                SELECT HospitalID
+                  FROM rust.Hospitals
+                 WHERE UPPER(CONVERT(varchar(max), Name)) = @P2
+            ))
+            ;
+        ";
+
+        let _result = self.client.execute(q, &[&patient.name(), &hospital_name.to_uppercase()])
+            .await
+            .map_err(NewRepositoryError::Tiberius)?;
+        
+        match self.get_hospital(hospital_name).await? {
+            Some(h) => Ok(h),
+            None => Err(NewRepositoryError::Other(format!("Invalid hospital name: \"{}\"", hospital_name)))
+        }
     }
 
-    async fn remove_patient_from_hospital(&mut self, _patient_id: u32, _hospital_name: &str) -> Result<Hospital, NewRepositoryError> {
-        todo!()
+    async fn remove_patient_from_hospital(&mut self, patient_id: u32, hospital_name: &str) -> Result<Hospital, NewRepositoryError> {
+        let q = "
+            DELETE FROM rust.Patients
+             WHERE PatientID = @P1
+               AND HospitalID = (
+                   SELECT HospitalID
+                     FROM rust.Hospitals
+                    WHERE UPPER(CONVERT(varchar(max), Name)) = @P2
+               )
+            ;
+        ";
+
+        let _result = self.client.execute(q, &[&(patient_id as i32), &hospital_name.to_uppercase()])
+            .await
+            .map_err(NewRepositoryError::Tiberius)?;
+
+        match self.get_hospital(hospital_name).await? {
+            Some(h) => Ok(h),
+            None => Err(NewRepositoryError::Other(format!("Invalid hospital name: \"{}\"", hospital_name)))
+        }
     }
 }

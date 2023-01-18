@@ -8,6 +8,7 @@ An example web application using Rust for the backend.
    its default schema.
 4. give the Tiberius account permission to create table, delete, insert, select,
    and update.
+5. run the app with `cargo run -- --setup`
 
 ## Required Environment Variables
 - `JWT_SECRET`: the secret key to use for signing JSON web tokens

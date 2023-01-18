@@ -15,7 +15,7 @@ impl HospitalService {
         self.repository.get_all_hospitals().await
     }
 
-    pub async fn get_hospital_by_name(&self, name: &str) -> Result<Option<Hospital>, NewRepositoryError> {
+    pub async fn get_hospital_by_name(&mut self, name: &str) -> Result<Option<Hospital>, NewRepositoryError> {
         self.repository.get_hospital(name).await
     }
 
@@ -44,7 +44,7 @@ pub mod tests {
         #[async_trait]
         impl HospitalRepository for Dummy {
             async fn get_all_hospitals(&mut self) -> Result<Vec<Hospital>, NewRepositoryError>;
-            async fn get_hospital(&self, name: &str) -> Result<Option<Hospital>, NewRepositoryError>;
+            async fn get_hospital(&mut self, name: &str) -> Result<Option<Hospital>, NewRepositoryError>;
             async fn add_patient_to_hospital(&mut self, hospital_name: &str, patient: Patient) -> Result<Hospital, NewRepositoryError>;
             async fn remove_patient_from_hospital(&mut self, patient_id: u32, hospital_name: &str) -> Result<Hospital, NewRepositoryError>;
         }
@@ -71,7 +71,7 @@ pub mod tests {
             .expect_get_hospital()
             .once()
             .returning(|_by| Ok(None));
-        let sut = HospitalService::new(mock);
+        let mut sut = HospitalService::new(mock);
 
         let result = sut.get_hospital_by_name("Foo").await;
 
