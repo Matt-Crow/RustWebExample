@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, fmt::Display};
 use tiberius::{Client, Config, AuthMethod, error::Error, EncryptionLevel};
 use tokio_util::compat::{TokioAsyncWriteCompatExt, Compat};
 use tokio::net::windows::named_pipe::{ClientOptions, NamedPipeClient};
@@ -6,6 +6,14 @@ use tokio::net::windows::named_pipe::{ClientOptions, NamedPipeClient};
 #[derive(Debug)]
 pub enum DatabaseError {
     Tiberius(Error)
+}
+
+impl Display for DatabaseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Tiberius(inner) => write!(f, "Tiberius error: {}", inner.to_string())
+        }
+    }
 }
 
 pub async fn create_client_from_env() -> Result<Client<Compat<NamedPipeClient>>, DatabaseError> {
