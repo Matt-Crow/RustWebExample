@@ -5,3 +5,4 @@ pub mod hospital_models;
 pub mod hospital_repository;
 pub mod hospital_services;
 pub mod service_provider;
+pub mod users;

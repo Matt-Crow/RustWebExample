@@ -8,7 +8,7 @@ use std::env;
 use actix_web::{HttpServer, App, web};
 use actix_web_httpauth::middleware::HttpAuthentication;
 use crate::{
-    core::service_provider::ServiceProvider,
+    core::{service_provider::ServiceProvider, users::User},
     infrastructure::{routes::configure_hospital_routes, authentication::jwt::{jwt_auth_middleware, configure_jwt_routes}, database::{connection::create_client_from_env, database_repository::DatabaseHospitalRepository}}
 };
 
@@ -36,6 +36,14 @@ async fn main() -> std::io::Result<()> {
     // The Rust ecosystem does not appear to have a good Dependency Injection
     // framework, so we have to bundle together the service providers ourselves.
     let sp = web::Data::new(ServiceProvider::new(repo));
+    
+    { // create scope so this drops the borrow before moving sp into the closure
+        let mut u = User::new("Matt");
+        u.add_to_group("admin");
+        let mut users = sp.users().lock().await;
+        //users.create(&u).await.expect("create user should work");
+    }
+    
 
     println!("Starting web server...");
     
