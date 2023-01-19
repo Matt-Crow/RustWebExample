@@ -1,25 +1,41 @@
 // Declare which modules (folders) should be compiled / loaded.
 // These are searched recursively to load any of their declared modules as well.
-pub mod core; // can declare modules as public in case other programs need them
+mod core; // can declare modules as public in case other programs need them
 mod infrastructure;
 
-use actix_web::{
-    HttpServer, 
-    App,
-    web
-};
+use std::env;
+
+use actix_web::{HttpServer, App, web};
 use actix_web_httpauth::middleware::HttpAuthentication;
 use crate::{
     core::service_provider::ServiceProvider,
-    infrastructure::{routes::configure_hospital_routes, authentication::jwt::{jwt_auth_middleware, configure_jwt_routes}}
+    infrastructure::{routes::configure_hospital_routes, authentication::jwt::{jwt_auth_middleware, configure_jwt_routes}, database::{connection::create_client_from_env, database_repository::DatabaseHospitalRepository}}
 };
 
 #[actix_web::main]
-async fn main() -> std::io::Result<()> { // "()" is essentially "null"
+async fn main() -> std::io::Result<()> {
+    let mssql_client = create_client_from_env()
+        .await
+        .expect("Failed to create mssql client!");
+    
+    let mut repo = DatabaseHospitalRepository::new(mssql_client);
+
+    let args: Vec<String> = env::args().collect();
+    if args.iter().any(|arg| arg == "--setup") {
+        let r = repo.setup().await;
+        println!("Setup result: {:#?}", r);
+    }
+    /*
+    let db_connection_pool = make_db_pool().await;
+    println!("DB connection pool: {:#?}", db_connection_pool);
+    let c = db_connection_pool.unwrap();
+    let conn = c.get().await; // times out here
+    println!("Connection: {:#?}", conn);
+    */
 
     // The Rust ecosystem does not appear to have a good Dependency Injection
     // framework, so we have to bundle together the service providers ourselves.
-    let sp = web::Data::new(ServiceProvider::default());
+    let sp = web::Data::new(ServiceProvider::new(repo));
 
     println!("Starting web server...");
     
@@ -32,41 +48,7 @@ async fn main() -> std::io::Result<()> { // "()" is essentially "null"
                 .configure(configure_hospital_routes)
             )
         })
-        .bind(("127.0.0.1", 8080))? // "?" means "return error if this fails, else unwrap"
+        .bind(("127.0.0.1", 8080))?
         .run()
         .await
 }
-
-
-/*
-trait Demo {
-
-}
-
-struct A {
-
-}
-
-impl Demo for A {
-    
-}
-
-struct B {
-
-}
-
-impl Demo for B {
-
-}
-
-fn pick_demo<T>(use_a: bool) -> Box<T> 
-where
-    T: Demo
-{
-    if use_a {
-        Box::new(A {})
-    } else {
-        Box::new(B {})
-    }
-}
-*/

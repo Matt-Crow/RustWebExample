@@ -1,9 +1,9 @@
 // The Rust ecosystem does not appear to support any standard Dependency
 // Injection framework, but once one arises, this module can be replaced.
 
-use std::sync::Mutex;
+use tokio::sync::Mutex;
 
-use crate::core::{hospital_services::HospitalService, hospital_repository::{HospitalRepository, InMemoryHospitalRepository}, hospital_models::Hospital};
+use crate::core::{hospital_services::HospitalService, hospital_repository::HospitalRepository};
 
 // one weakness of this implementation of DI is how it must know all the 
 // services it must provide, unlike the .NET DI subsystem, which uses generics
@@ -18,18 +18,6 @@ impl ServiceProvider {
         Self {
             hospital_service: Mutex::new(HospitalService::new(hospital_repository))
         }
-    }
-
-    pub fn default() -> Self {
-        Self::new(
-            InMemoryHospitalRepository::containing(&vec![
-                Hospital::new("Atascadero"),
-                Hospital::new("Coalinga"),
-                Hospital::new("Napa"),
-                Hospital::new("Metropolitan"),
-                Hospital::new("Patton")
-            ])
-        )
     }
 
     pub fn hospitals(&self) -> &Mutex<HospitalService> {
