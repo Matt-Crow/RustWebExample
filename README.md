@@ -14,7 +14,6 @@ An example web application using Rust for the backend.
 - `JWT_SECRET`: the secret key to use for signing JSON web tokens
 - `TIBERIUS_USERNAME`: the username Tiberius will log in as to the MSSQL server
 - `TIBERIUS_PASSWORD`: the password Tiberius will use to log in to the MSSQL server
-- `TIBERIUS_PIPE`: the named pipe Tiberius will use to connect to the MSSQL server
 
 ## Running the App
 `cargo run`
