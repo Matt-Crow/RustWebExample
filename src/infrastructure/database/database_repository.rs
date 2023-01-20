@@ -9,26 +9,30 @@ use std::{fs::read_to_string, collections::{HashMap, hash_map::Entry::Vacant}};
 use async_trait::async_trait;
 use futures_util::{StreamExt, future, TryStreamExt};
 use tiberius::{Client, ExecuteResult};
-use tokio::net::windows::named_pipe::NamedPipeClient;
+use tokio::net::TcpStream;
 use tokio_util::compat::Compat;
 
 use crate::core::{hospital_repository::{HospitalRepository, RepositoryError}, hospital_models::{Hospital, Patient}};
 
 pub struct DatabaseHospitalRepository {
-    client: Client<Compat<NamedPipeClient>>
+    client: Client<Compat<TcpStream>>
 }
 
 impl DatabaseHospitalRepository {
-    pub fn new(client: Client<Compat<NamedPipeClient>>) -> Self {
+    pub fn new(client: Client<Compat<TcpStream>>) -> Self {
         Self {
             client
         }
     }
 
     pub async fn setup(&mut self) -> Result<ExecuteResult, RepositoryError> {
-        let content = read_to_string("./setup.sql").map_err(|e| RepositoryError::other(&e.to_string()))?;
-        println!("Executing setup: \n{}", content);
-        let r = self.client.execute(content, &[]).await.map_err(|e| RepositoryError::other(&e.to_string()))?;
+        let content = read_to_string("./setup.sql")
+            .map_err(|e| RepositoryError::other(&e.to_string()))?;
+
+        let r = self.client.execute(content, &[])
+            .await
+            .map_err(|e| RepositoryError::other(&e.to_string()))?;
+        
         Ok(r)
     }
 }

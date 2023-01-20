@@ -14,10 +14,8 @@ pub enum DatabaseError {
 /// this will return an error if any environment variables are not set or any
 /// errors arise while connecting
 pub async fn make_db_pool() -> Result<Pool<ConnectionManager>, DatabaseError> {
-    // might not work, as it looks like bb8-tiberius is only implemented for TCP
-    // not NamedPipe
-    // https://github.com/kardeiz/bb8-tiberius/blob/master/src/lib.rs
-    let config = create_config_from_env().map_err(|env_err| DatabaseError::Other(env_err.to_string()))?;
+    let config = create_config_from_env()
+        .map_err(|env_err| DatabaseError::Other(env_err.to_string()))?;
 
     let manager = ConnectionManager::new(config);
     let pool = bb8::Pool::builder()
