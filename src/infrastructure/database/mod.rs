@@ -1,3 +1,3 @@
 pub mod connection;
-pub mod database_repository;
-pub mod orm;
+pub mod database_hospital_repository;
+pub mod database_user_repository;

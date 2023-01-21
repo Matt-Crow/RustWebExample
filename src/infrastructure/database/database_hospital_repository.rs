@@ -4,22 +4,22 @@
 // Rust ecosystem does not currently have an ORM for MSSQL, so we have to
 // manually construct the SQL queries ourselves.
 
-use std::{fs::read_to_string, collections::{HashMap, hash_map::Entry::Vacant}};
+use std::{fs::read_to_string, collections::{HashMap, hash_map::Entry::Vacant}, sync::Arc};
 
 use async_trait::async_trait;
 use futures_util::{StreamExt, future, TryStreamExt};
 use tiberius::{Client, ExecuteResult};
-use tokio::net::TcpStream;
+use tokio::{net::TcpStream, sync::Mutex};
 use tokio_util::compat::Compat;
 
 use crate::core::{hospital_repository::{HospitalRepository, RepositoryError}, hospital_models::{Hospital, Patient}};
 
 pub struct DatabaseHospitalRepository {
-    client: Client<Compat<TcpStream>>
+    client: Arc<Mutex<Client<Compat<TcpStream>>>>
 }
 
 impl DatabaseHospitalRepository {
-    pub fn new(client: Client<Compat<TcpStream>>) -> Self {
+    pub fn new(client: Arc<Mutex<Client<Compat<TcpStream>>>>) -> Self {
         Self {
             client
         }
@@ -29,7 +29,7 @@ impl DatabaseHospitalRepository {
         let content = read_to_string("./setup.sql")
             .map_err(|e| RepositoryError::other(&e.to_string()))?;
 
-        let r = self.client.execute(content, &[])
+        let r = self.client.lock().await.execute(content, &[])
             .await
             .map_err(|e| RepositoryError::other(&e.to_string()))?;
         
@@ -57,7 +57,8 @@ impl HospitalRepository for DatabaseHospitalRepository {
             ;
         ";
 
-        let query_result = self.client.simple_query(q)
+        let mut client = self.client.lock().await;
+        let query_result = client.simple_query(q)
             .await
             .map_err(RepositoryError::tiberius)?;
         
@@ -105,7 +106,8 @@ impl HospitalRepository for DatabaseHospitalRepository {
             ;
         ";
 
-        let query_result = self.client.query(q, &[&name.to_uppercase()])
+        let mut client = self.client.lock().await;
+        let query_result = client.query(q, &[&name.to_uppercase()])
             .await
             .map_err(RepositoryError::tiberius)?;
         
@@ -150,8 +152,8 @@ impl HospitalRepository for DatabaseHospitalRepository {
             ))
             ;
         ";
-
-        let _result = self.client.execute(q, &[&patient.name(), &hospital_name.to_uppercase()])
+        
+        let _result = self.client.lock().await.execute(q, &[&patient.name(), &hospital_name.to_uppercase()])
             .await
             .map_err(RepositoryError::tiberius)?;
         
@@ -172,7 +174,7 @@ impl HospitalRepository for DatabaseHospitalRepository {
             ;
         ";
 
-        let _result = self.client.execute(q, &[&(patient_id as i32), &hospital_name.to_uppercase()])
+        let _result = self.client.lock().await.execute(q, &[&(patient_id as i32), &hospital_name.to_uppercase()])
             .await
             .map_err(RepositoryError::tiberius)?;
 

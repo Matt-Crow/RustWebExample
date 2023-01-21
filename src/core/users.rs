@@ -3,8 +3,10 @@
 use std::collections::HashSet;
 
 use async_trait::async_trait;
+use serde::Serialize;
 
 /// the system representation of a user
+#[derive(Serialize)]
 pub struct User {
     /// will be None when the user has not been stored in a repository
     id: Option<i32>,
@@ -71,10 +73,16 @@ impl Clone for User {
 
 #[derive(Debug)]
 pub enum UserError {
+    Other(String),
+    NotImplemented,
     DuplicateUsername(String)
 }
 
 impl UserError {
+    pub fn other(message: &str) -> Self {
+        Self::Other(String::from(message))
+    }
+
     fn duplicate_username(username: &str) -> Self {
         Self::DuplicateUsername(String::from(username))
     }
@@ -100,7 +108,7 @@ impl UserService {
         }
     }
 
-    pub async fn get_user_by_name(&self, name: &str) -> Result<Option<User>, UserError> {
+    pub async fn get_user_by_name(&mut self, name: &str) -> Result<Option<User>, UserError> {
         self.repository.get_user_by_name(name).await
     }
 }
@@ -113,10 +121,10 @@ impl UserService {
 pub trait UserRepository {
     
     /// returns the user with the given name, or None if no such user exists
-    async fn get_user_by_name(&self, name: &str) -> Result<Option<User>, UserError>;
+    async fn get_user_by_name(&mut self, name: &str) -> Result<Option<User>, UserError>;
 
     /// inserts a new user into the backing store
-    async fn insert_user(&self, user: &User) -> Result<User, UserError>;
+    async fn insert_user(&mut self, user: &User) -> Result<User, UserError>;
 }
 
 #[cfg(test)]
@@ -132,8 +140,8 @@ pub mod tests {
 
         #[async_trait]
         impl UserRepository for Dummy {
-            async fn get_user_by_name(&self, name: &str) -> Result<Option<User>, UserError>;
-            async fn insert_user(&self, user: &User) -> Result<User, UserError>;
+            async fn get_user_by_name(&mut self, name: &str) -> Result<Option<User>, UserError>;
+            async fn insert_user(&mut self, user: &User) -> Result<User, UserError>;
         }
     }
 
@@ -200,7 +208,7 @@ pub mod tests {
             .expect_get_user_by_name()
             .once()
             .returning(|_name| Ok(None));
-        let sut = UserService::new(repo);
+        let mut sut = UserService::new(repo);
 
         let result = sut.get_user_by_name("Foo").await;
 
