@@ -1,7 +1,7 @@
-use actix_web::{web::{ServiceConfig, Json, self, post}, Responder, dev::Response, HttpResponse};
+use actix_web::{web::{ServiceConfig, Json, self, post}, HttpResponse};
 use serde::Deserialize;
 
-use crate::core::{service_provider::{self, ServiceProvider}, users::User};
+use crate::core::{service_provider::ServiceProvider, users::User};
 
 pub fn configure_authentication_routes(cfg: &mut ServiceConfig) {
     cfg.route("/signup", post().to(handle_signup));

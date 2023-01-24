@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use serde::Serialize;
 
 /// the system representation of a user
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct User {
     /// will be None when the user has not been stored in a repository
     id: Option<i32>,
@@ -47,6 +47,10 @@ impl User {
         self.name.to_owned()
     }
 
+    pub fn groups(&self) -> Vec<String> {
+        self.groups.to_owned().into_iter().collect()
+    }
+
     /// checks to see if this user belongs to the given group
     pub fn is_in_group(&self, group: &str) -> bool {
         self.groups.contains(group)
@@ -75,7 +79,8 @@ impl Clone for User {
 pub enum UserError {
     Other(String),
     NotImplemented,
-    DuplicateUsername(String)
+    DuplicateUsername(String),
+    Tiberius(tiberius::error::Error)
 }
 
 impl UserError {

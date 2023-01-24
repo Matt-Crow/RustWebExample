@@ -1,6 +1,6 @@
 // Declare which modules (folders) should be compiled / loaded.
 // These are searched recursively to load any of their declared modules as well.
-mod core; // can declare modules as public in case other programs need them
+pub mod core; // can declare modules as public in case other programs need them
 mod infrastructure;
 
 use std::{env, sync::Arc};
@@ -26,7 +26,7 @@ async fn main() -> std::io::Result<()> {
     if args.iter().any(|arg| arg == "--setup") {
         let r = hospital_repo.setup().await;
         println!("Setup result: {:#?}", r);
-    }    
+    }
 
     // The Rust ecosystem does not appear to have a good Dependency Injection
     // framework, so we have to bundle together the service providers ourselves.

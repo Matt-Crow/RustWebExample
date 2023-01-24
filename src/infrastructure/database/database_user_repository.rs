@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use futures_util::{TryStreamExt, StreamExt, future};
-use tiberius::Client;
+use tiberius::{Client, ToSql};
 use tokio::{net::TcpStream, sync::Mutex};
 use tokio_util::compat::Compat;
 
@@ -72,13 +72,65 @@ impl UserRepository for DatabaseUserRepository {
                 None => None
             })
             .for_each(|group_name| {
-                u.add_to_group(&group_name);
+                u.add_to_group(group_name);
             });
         
         Ok(Some(u))
     }
 
     async fn insert_user(&mut self, user: &User) ->  Result<User, UserError> {
-        todo!()
+        let create_user_q = "
+            INSERT INTO rust.Users (Name)
+            VALUES
+                (@P1)
+        ";
+
+        let mut client = self.client.lock().await;
+        let _create_user_result = client.execute(create_user_q, &[&user.name()])
+            .await
+            .map_err(UserError::Tiberius)?;
+        
+        let get_user_id_q = "
+            SELECT UserId
+              FROM rust.Users
+             WHERE Name = @P1
+        ";
+        let created_id: i32 = client.query(get_user_id_q, &[&user.name()])
+            .await
+            .map_err(UserError::Tiberius)?
+            .into_row() // should only have one row, so grab that
+            .await
+            .map_err(UserError::Tiberius)?
+            .expect("should be exactly one ID for user with the given name")
+            .get("UserId")
+            .expect("should contain UserId column");
+        
+        let mut insert_params: Vec<&dyn ToSql> = Vec::new();
+        insert_params.push(&created_id);
+        
+        let mut insert_groups_q = String::from("
+            INSERT INTO rust.User_Groups (UserId, GroupName)
+            VALUES
+        ");
+        let groups = user.groups();
+        for group in groups.iter() {
+            insert_params.push(group);
+        }
+        let records: Vec<String> = user.groups()
+            .iter()
+            .enumerate() // (i, val)
+            .map(|(i, _val)| i + 2)
+            .map(|idx| format!("(@P1, @P{})", idx))
+            .collect();
+        insert_groups_q += &records.join(", ");
+        insert_groups_q += ";";
+
+        println!("Query: {}", insert_groups_q);
+        let _r = client.execute(insert_groups_q, &insert_params)
+            .await
+            .map_err(UserError::Tiberius)?;
+
+        
+        Ok(user.with_id(created_id))
     }
 }
