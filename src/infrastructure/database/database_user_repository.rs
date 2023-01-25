@@ -1,21 +1,21 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use bb8::Pool;
+use bb8_tiberius::ConnectionManager;
 use futures_util::{TryStreamExt, StreamExt, future};
-use tiberius::{Client, ToSql};
-use tokio::{net::TcpStream, sync::Mutex};
-use tokio_util::compat::Compat;
+use tiberius::ToSql;
 
 use crate::core::users::{UserRepository, User, UserError};
 
 pub struct DatabaseUserRepository {
-    client: Arc<Mutex<Client<Compat<TcpStream>>>>
+    pool: Arc<Pool<ConnectionManager>> // does this need an arc?
 }
 
 impl DatabaseUserRepository {
-    pub fn new(client: Arc<Mutex<Client<Compat<TcpStream>>>>) -> Self {
+    pub fn new(pool: Pool<ConnectionManager>) -> Self {
         Self {
-            client
+            pool: Arc::new(pool)
         }
     }
 }
@@ -39,7 +39,10 @@ impl UserRepository for DatabaseUserRepository {
          WHERE u.Name = @P1;
         ";
 
-        let mut client = self.client.lock().await;
+        let mut client = self.pool.get()
+            .await
+            .map_err(|e| UserError::Other(e.to_string()))?;
+        
         let result = client.query(q, &[&name])
             .await
             .map_err(|e| UserError::Other(e.to_string()))?;
@@ -85,7 +88,10 @@ impl UserRepository for DatabaseUserRepository {
                 (@P1)
         ";
 
-        let mut client = self.client.lock().await;
+        let mut client = self.pool.get()
+            .await
+            .map_err(|e| UserError::Other(e.to_string()))?;
+
         let _create_user_result = client.execute(create_user_q, &[&user.name()])
             .await
             .map_err(UserError::Tiberius)?;
