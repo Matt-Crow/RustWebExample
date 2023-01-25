@@ -10,16 +10,21 @@ use actix_web_httpauth::middleware::HttpAuthentication;
 use tokio::sync::Mutex;
 use crate::{
     core::service_provider::ServiceProvider,
-    infrastructure::{routes::configure_hospital_routes, authentication::{jwt::{jwt_auth_middleware, configure_jwt_routes}, routes::configure_authentication_routes}, database::{connection::create_client_from_env, database_hospital_repository::DatabaseHospitalRepository, database_user_repository::DatabaseUserRepository}}
+    infrastructure::{routes::configure_hospital_routes, authentication::{jwt::{jwt_auth_middleware, configure_jwt_routes}, routes::configure_authentication_routes}, database::{connection::create_client_from_env, database_hospital_repository::DatabaseHospitalRepository, database_user_repository::DatabaseUserRepository, pool::make_db_pool}}
 };
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+
+    let pool = make_db_pool()
+        .await
+        .expect("Database pool should initialize successfully");
+
     let mssql_client = Arc::new(Mutex::new(create_client_from_env()
         .await
         .expect("Failed to create mssql client!")));
     
-    let mut hospital_repo = DatabaseHospitalRepository::new(mssql_client.clone());
+    let mut hospital_repo = DatabaseHospitalRepository::new(pool);
     let user_repo = DatabaseUserRepository::new(mssql_client.clone());
 
     let args: Vec<String> = env::args().collect();

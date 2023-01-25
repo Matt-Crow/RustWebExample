@@ -48,7 +48,7 @@ impl User {
     }
 
     pub fn groups(&self) -> Vec<String> {
-        self.groups.to_owned().into_iter().collect()
+        self.groups.iter().cloned().collect()
     }
 
     /// checks to see if this user belongs to the given group

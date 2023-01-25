@@ -6,11 +6,11 @@ IF OBJECT_ID(N'rust.Patients', N'U') IS NOT NULL
 IF OBJECT_ID(N'rust.Hospitals', N'U') IS NOT NULL
 	DROP TABLE rust.Hospitals;
 
-IF OBJECT_ID(N'rust.Users', N'U') IS NOT NULL
-	DROP TABLE rust.Users;
-
 IF OBJECT_ID(N'rust.User_Groups', N'U') IS NOT NULL
 	DROP TABLE rust.User_Groups;
+	
+IF OBJECT_ID(N'rust.Users', N'U') IS NOT NULL
+	DROP TABLE rust.Users;
 
 CREATE TABLE rust.Hospitals (
 	HospitalID int IDENTITY(1, 1) PRIMARY KEY NOT NULL,

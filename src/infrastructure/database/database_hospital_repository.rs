@@ -7,21 +7,24 @@
 use std::{fs::read_to_string, collections::{HashMap, hash_map::Entry::Vacant}, sync::Arc};
 
 use async_trait::async_trait;
+use bb8::Pool;
+use bb8_tiberius::ConnectionManager;
 use futures_util::{StreamExt, future, TryStreamExt};
-use tiberius::{Client, ExecuteResult};
-use tokio::{net::TcpStream, sync::Mutex};
-use tokio_util::compat::Compat;
+use tiberius::ExecuteResult;
 
 use crate::core::{hospital_repository::{HospitalRepository, RepositoryError}, hospital_models::{Hospital, Patient}};
 
 pub struct DatabaseHospitalRepository {
-    client: Arc<Mutex<Client<Compat<TcpStream>>>>
+    pool: Arc<Pool<ConnectionManager>> // does this need an arc?
 }
 
 impl DatabaseHospitalRepository {
-    pub fn new(client: Arc<Mutex<Client<Compat<TcpStream>>>>) -> Self {
+
+    pub fn new(
+        pool: Pool<ConnectionManager>
+    ) -> Self {
         Self {
-            client
+            pool: Arc::new(pool)
         }
     }
 
@@ -29,9 +32,13 @@ impl DatabaseHospitalRepository {
         let content = read_to_string("./setup.sql")
             .map_err(|e| RepositoryError::other(&e.to_string()))?;
 
-        let r = self.client.lock().await.execute(content, &[])
+        let mut conn = self.pool.get()
             .await
-            .map_err(|e| RepositoryError::other(&e.to_string()))?;
+            .map_err(RepositoryError::other)?;
+                
+        let r = conn.execute(content, &[])
+            .await
+            .map_err(RepositoryError::other)?;
         
         Ok(r)
     }
@@ -57,8 +64,11 @@ impl HospitalRepository for DatabaseHospitalRepository {
             ;
         ";
 
-        let mut client = self.client.lock().await;
-        let query_result = client.simple_query(q)
+        let mut conn = self.pool.get()
+            .await
+            .map_err(RepositoryError::other)?;
+
+        let query_result = conn.simple_query(q)
             .await
             .map_err(RepositoryError::tiberius)?;
         
@@ -106,7 +116,10 @@ impl HospitalRepository for DatabaseHospitalRepository {
             ;
         ";
 
-        let mut client = self.client.lock().await;
+        let mut client = self.pool.get()
+            .await
+            .map_err(RepositoryError::other)?;
+
         let query_result = client.query(q, &[&name.to_uppercase()])
             .await
             .map_err(RepositoryError::tiberius)?;
@@ -153,9 +166,17 @@ impl HospitalRepository for DatabaseHospitalRepository {
             ;
         ";
         
-        let _result = self.client.lock().await.execute(q, &[&patient.name(), &hospital_name.to_uppercase()])
-            .await
-            .map_err(RepositoryError::tiberius)?;
+        {
+            // perform the insertion in an inner scope so the borrow of self
+            // gets dropped before the call to self.get_hospital
+            let mut conn = self.pool.get()
+                .await
+                .map_err(RepositoryError::other)?;
+
+            let _result = conn.execute(q, &[&patient.name(), &hospital_name.to_uppercase()])
+                .await
+                .map_err(RepositoryError::tiberius)?;
+        }
         
         self.get_hospital(hospital_name)
             .await?
@@ -173,10 +194,17 @@ impl HospitalRepository for DatabaseHospitalRepository {
                )
             ;
         ";
+        
+        {
+            let mut conn = self.pool.get()
+                .await
+                .map_err(RepositoryError::other)?;
 
-        let _result = self.client.lock().await.execute(q, &[&(patient_id as i32), &hospital_name.to_uppercase()])
-            .await
-            .map_err(RepositoryError::tiberius)?;
+            let _result = conn.execute(q, &[&(patient_id as i32), &hospital_name.to_uppercase()])
+                .await
+                .map_err(RepositoryError::tiberius)?;
+            // drops borrow of self here
+        }
 
         self.get_hospital(hospital_name)
             .await?

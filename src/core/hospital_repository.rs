@@ -11,8 +11,8 @@ pub enum RepositoryError {
 
 impl RepositoryError {
 
-    pub fn other(message: &str) -> Self {
-        Self::Other(String::from(message))
+    pub fn other(message: impl ToString) -> Self {
+        Self::Other(message.to_string())
     }
     pub fn invalid_hospital_name(name: &str) -> Self {
         Self::InvalidHospitalName(String::from(name))
