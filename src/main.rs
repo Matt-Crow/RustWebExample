@@ -9,16 +9,15 @@ use actix_web::{HttpServer, App, web};
 use actix_web_httpauth::middleware::HttpAuthentication;
 use crate::{
     core::service_provider::ServiceProvider,
-    infrastructure::{routes::configure_hospital_routes, authentication::{jwt::{jwt_auth_middleware, configure_jwt_routes}, routes::configure_authentication_routes, openid::{do_openid, spawn_openid_callback_listener}}, database::{database_hospital_repository::DatabaseHospitalRepository, database_user_repository::DatabaseUserRepository, pool::make_db_pool}}
+    infrastructure::{routes::configure_hospital_routes, authentication::{jwt::{jwt_auth_middleware, configure_jwt_routes}, routes::configure_authentication_routes, openid::setup_openid}, database::{database_hospital_repository::DatabaseHospitalRepository, database_user_repository::DatabaseUserRepository, pool::make_db_pool}}
 };
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    spawn_openid_callback_listener();
-        //.await
-        //.expect("Should be able to set up callback listener");
-    let openid_result = do_openid().await;
-    println!("OpenID: {:#?}", openid_result);
+    match setup_openid().await {
+        Ok(_) => println!("Started OpenID"),
+        Err(e) => println!("Failed to start OpenID: {}", e)
+    }
 
     let pool = make_db_pool()
         .await
