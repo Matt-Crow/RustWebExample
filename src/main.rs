@@ -9,15 +9,16 @@ use actix_web::{HttpServer, App, web};
 use actix_web_httpauth::middleware::HttpAuthentication;
 use crate::{
     core::service_provider::ServiceProvider,
-    infrastructure::{routes::configure_hospital_routes, authentication::{jwt::{jwt_auth_middleware, configure_jwt_routes}, routes::configure_authentication_routes, openid::setup_openid}, database::{database_hospital_repository::DatabaseHospitalRepository, database_user_repository::DatabaseUserRepository, pool::make_db_pool}}
+    infrastructure::{routes::configure_hospital_routes, authentication::{jwt::{jwt_auth_middleware, configure_jwt_routes}, routes::configure_authentication_routes, openid::{OpenIdService, configure_openid_routes}}, database::{database_hospital_repository::DatabaseHospitalRepository, database_user_repository::DatabaseUserRepository, pool::make_db_pool}}
 };
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    match setup_openid().await {
-        Ok(_) => println!("Started OpenID"),
-        Err(e) => println!("Failed to start OpenID: {}", e)
-    }
+    let mut openid_service = OpenIdService::from_env()
+        .await
+        .expect("Should be able to start OpenID service");
+
+    openid_service.generate_auth_url().await;
 
     let pool = make_db_pool()
         .await
@@ -34,15 +35,18 @@ async fn main() -> std::io::Result<()> {
 
     // The Rust ecosystem does not appear to have a good Dependency Injection
     // framework, so we have to bundle together the service providers ourselves.
-    let sp = web::Data::new(ServiceProvider::new(hospital_repo, user_repo));    
+    let sp = web::Data::new(ServiceProvider::new(hospital_repo, user_repo));
+    let oid = web::Data::new(openid_service);    
 
     println!("Starting web server...");
     
     HttpServer::new(move || {
         App::new()
             .app_data(sp.clone()) // app data is thread-safe
+            .app_data(oid.clone())
             .configure(configure_authentication_routes)
             .configure(configure_jwt_routes)
+            .configure(configure_openid_routes)
             .service(web::scope("/api/v1") // register API routes
                 .wrap(HttpAuthentication::bearer(jwt_auth_middleware))
                 .configure(configure_hospital_routes)
