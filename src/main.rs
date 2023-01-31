@@ -2,7 +2,6 @@
 // These are searched recursively to load any of their declared modules as well.
 pub mod core; // can declare modules as public in case other programs need them
 mod infrastructure;
-mod temp;
 
 use std::env;
 
@@ -10,13 +9,11 @@ use actix_web::{HttpServer, App, web};
 use actix_web_httpauth::middleware::HttpAuthentication;
 use crate::{
     core::service_provider::ServiceProvider,
-    infrastructure::{routes::configure_hospital_routes, authentication::{jwt::{jwt_auth_middleware, configure_jwt_routes}, routes::configure_authentication_routes, openid::{OpenIdService, configure_openid_routes}}, database::{database_hospital_repository::DatabaseHospitalRepository, database_user_repository::DatabaseUserRepository, pool::make_db_pool}}, temp::read
+    infrastructure::{routes::configure_hospital_routes, authentication::{jwt::{jwt_auth_middleware, configure_jwt_routes}, routes::configure_authentication_routes, openid::{OpenIdService, configure_openid_routes}}, database::{database_hospital_repository::DatabaseHospitalRepository, database_user_repository::DatabaseUserRepository, pool::make_db_pool}}
 };
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    read()?;
-    println!("");
 
     let mut openid_service = OpenIdService::from_env()
         .await

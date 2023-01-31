@@ -18,7 +18,7 @@ bb8 = "0.8.0"
 bb8-tiberius = "0.13.0"
 futures-util = "0.3.25"
 async-trait = "0.1.61"
-openidconnect = "2.5.0"
+openidconnect = { version = "2.5.0", features = ["accept-rfc3339-timestamps"] }
 
 # https://github.com/prisma/tiberius/issues/145#issuecomment-829044670
 [dependencies.tokio-util]
