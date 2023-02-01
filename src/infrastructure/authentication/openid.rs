@@ -1,13 +1,14 @@
 // OpenID defers the authentication of users to a third-party service.
 // derived from 
 // https://github.com/ramosbugs/openidconnect-rs/blob/main/examples/google.rs
+// https://openid.net/specs/openid-connect-basic-1_0.html
 
 use std::{env, fmt::{Display, Debug}, error::Error};
 
 use actix_web::{web::{ServiceConfig, get, self}, Responder, HttpResponse, error};
-use openidconnect::{core::{CoreProviderMetadata, CoreClient, CoreResponseType}, IssuerUrl, reqwest::async_http_client, ClientId, RedirectUrl, CsrfToken, Nonce, AuthenticationFlow, Scope, ClientSecret, AuthorizationCode};
+use openidconnect::{core::{CoreProviderMetadata, CoreClient, CoreResponseType, CoreAuthPrompt}, IssuerUrl, reqwest::async_http_client, ClientId, RedirectUrl, CsrfToken, Nonce, AuthenticationFlow, Scope, ClientSecret, AuthorizationCode};
 use reqwest::Url;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// Open ID configuration options. Stored as environment variables
 #[derive(Debug)]
@@ -18,36 +19,20 @@ pub struct OpenIdOptions {
 }
 
 impl OpenIdOptions {
-    pub fn new(url: &str, client_id: &str) -> Self {
-        Self {
-            url: String::from(url),
-            client_id: String::from(client_id),
-            client_secret: None
-        }
-    }
-
-    pub fn with_secret(&self, client_secret: &str) -> Self {
-        Self {
-            url: self.url.to_owned(),
-            client_id: self.client_id.to_owned(),
-            client_secret: Some(String::from(client_secret))
-        }
-    }
 
     pub fn from_env() -> Result<Self, OpenIdError> {
         let url = env::var("OPENID_URL")
             .map_err(|_| OpenIdError::missing_env("OPENID_URL"))?;
         let id = env::var("OPENID_CLIENT_ID")
             .map_err(|_| OpenIdError::missing_env("OPENID_CLIENT_ID"))?;
-        let secret = env::var("OPENID_CLIENT_SECRET")
+        let maybe_secret = env::var("OPENID_CLIENT_SECRET")
             .ok(); // can be None
-        
-        let n = match secret {
-            Some(secret) => Self::new(&url, &id).with_secret(&secret),
-            None => Self::new(&url, &id)
-        };
 
-        Ok(n)
+        Ok(OpenIdOptions { 
+            url, 
+            client_id: id, 
+            client_secret: maybe_secret 
+        })
     }
 }
 
@@ -90,11 +75,20 @@ impl Display for OpenIdError {
     }
 }
 
+#[derive(Debug, Serialize)]
+pub struct OpenIdUser {
+    email: String,
+    groups: Vec<String>
+}
+
 #[derive(Debug)]
 pub struct OpenIdService {
     client: CoreClient,
-    token: Option<CsrfToken> // temp
+    token: Option<CsrfToken>, // temp. needed because this will be verified later
+    nonce: Option<Nonce>, // temp. needed because this will be verified later
 }
+// nonce & token are both generated with the auth URL, but are needed in the
+// callback - what is the best way to save them for later?
 
 impl OpenIdService {
     
@@ -109,7 +103,7 @@ impl OpenIdService {
         let client = CoreClient::from_provider_metadata(
                 provider_document,
                 ClientId::new(options.client_id),
-                options.client_secret.map(|secret| ClientSecret::new(secret))
+                options.client_secret.map(ClientSecret::new)
             )
             .set_redirect_uri(
                 RedirectUrl::new(String::from("http://localhost:8080/openid")).expect("Expected valid URL")
@@ -117,7 +111,8 @@ impl OpenIdService {
 
         Ok(Self {
             client,
-            token: None
+            token: None,
+            nonce: None
         })
     }
 
@@ -127,7 +122,7 @@ impl OpenIdService {
 
     pub async fn generate_auth_url(&mut self) -> Url {
         // generate an authorization URL requesting the details we want
-        let (authorization_url, csrf_state, _nonce) = self.client
+        let (authorization_url, csrf_state, nonce) = self.client
             .authorize_url(
                 AuthenticationFlow::<CoreResponseType>::AuthorizationCode, 
                 CsrfToken::new_random, 
@@ -135,8 +130,10 @@ impl OpenIdService {
             )
             .add_scope(Scope::new(String::from("email")))
             .add_scope(Scope::new(String::from("profile")))
+            .add_prompt(CoreAuthPrompt::Consent)
             .url();
         self.token = Some(csrf_state);
+        self.nonce = Some(nonce);
 
         println!("Authorization URL: {}", authorization_url);
 
@@ -147,13 +144,13 @@ impl OpenIdService {
     async fn handle_callback(
         &self, 
         params: AuthenticationCallbackParameters
-    ) -> Result<(), OpenIdError> {
+    ) -> Result<OpenIdUser, OpenIdError> {
         
         // validate CSRF token
         // how do I handle having multiple CSRF tokens?
         // use them as a PK somewhere?
         let expected = self.token.clone()
-            .ok_or_else(|| OpenIdError::NotImplemented)?
+            .ok_or(OpenIdError::NotImplemented)?
             .secret()
             .to_string();
         
@@ -161,22 +158,39 @@ impl OpenIdService {
             panic!("How do I properly validate CSRF?");
         }
             
-        self.exchange(params.code.to_owned())
+        let user = self.exchange_token_for_claims(params.code.to_owned())
             .await?;
 
-        Ok(())
+        Ok(user)
     }
 
-    pub async fn exchange(&self, code: String) -> Result<(), OpenIdError> {
+    /// once the user authorizes the OpenID provider, this method takes the
+    /// authorization code, and exchanges it for a set of claims about the user,
+    /// such as their email address and user groups
+    async fn exchange_token_for_claims(&self, code: String) -> Result<OpenIdUser, OpenIdError> {
         let token_response = self.client
             .exchange_code(AuthorizationCode::new(code))
             .request_async(async_http_client)
             .await
             .map_err(OpenIdError::trace)?;
         
-        println!("token response: {:#?}", token_response);
+        //println!("token response: {:#?}", token_response);
 
-        Ok(())
+        let claims = token_response
+            .extra_fields()
+            .id_token()
+            .expect("should contain ID token")
+            .claims(&self.client.id_token_verifier(), &self.nonce.clone().unwrap())
+            .map_err(OpenIdError::trace)?;
+        
+        let email = claims.email()
+            .expect("ID token should contain email")
+            .to_string();
+
+        Ok(OpenIdUser { 
+            email, 
+            groups: vec![String::from("todo")]
+        })
     }
 }
 
@@ -198,9 +212,11 @@ async fn handle_auth_callback(
     service: web::Data<OpenIdService>,
     openid_response: web::Query<AuthenticationCallbackParameters>
 ) -> impl Responder {
+
+    // todo: should this return access token for use as bearer? 
     service.handle_callback(openid_response.0)
         .await
-        .map(|_nothing_yet| HttpResponse::Ok().body("todo put bearer header in body"))
-        .map_err(|err| error::ErrorBadRequest(err))
+        .map(|user| HttpResponse::Ok().json(user))
+        .map_err(error::ErrorBadRequest)
 }
 
