@@ -14,6 +14,9 @@ An example web application using Rust for the backend.
 - `JWT_SECRET`: the secret key to use for signing JSON web tokens
 - `TIBERIUS_USERNAME`: the username Tiberius will log in as to the MSSQL server
 - `TIBERIUS_PASSWORD`: the password Tiberius will use to log in to the MSSQL server
+- `OPENDID_URL`: the URL for the OpenID provider to use. Formatted as `https://example.com/`
+- `OPENID_CLIENT_ID`: the app's client ID registered with the OpenID provider
+- `OPENID_CLIENT_SECRET`: the app's secret registered with the OpenID provider
 
 ## Running the App
 `cargo run`
