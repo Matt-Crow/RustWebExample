@@ -26,6 +26,9 @@ An example web application using Rust for the backend.
 `cargo clippy`
 
 ## Demo
+
+TODO: use browser to receive claims, set as bearer
+
 This app demonstrates many of the basic features common to most REST APIs.
 1. run the app and open `Postman`
 2. make a `GET` request to `localhost:8080/api/v1/hospitals` - should receive `401 unauthorized`

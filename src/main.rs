@@ -5,7 +5,8 @@ mod infrastructure;
 
 use std::env;
 
-use actix_web::{HttpServer, App, web};
+use actix_session::{SessionMiddleware, storage::CookieSessionStore};
+use actix_web::{HttpServer, App, web, cookie::Key};
 use actix_web_httpauth::middleware::HttpAuthentication;
 use crate::{
     core::service_provider::ServiceProvider,
@@ -15,11 +16,9 @@ use crate::{
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
 
-    let mut openid_service = OpenIdService::from_env()
+    let openid_service = OpenIdService::from_env()
         .await
         .expect("Should be able to start OpenID service");
-
-    openid_service.generate_auth_url().await;
 
     let pool = make_db_pool()
         .await
@@ -45,6 +44,10 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .app_data(sp.clone()) // app data is thread-safe
             .app_data(oid.clone())
+            .wrap(SessionMiddleware::new(
+                CookieSessionStore::default(),
+                Key::from("super-secret-key-that-must-be-at-least-64-bytes-long-so-I-guess-I-will-just-have-to-make-something-up".as_bytes())
+            ))
             .configure(configure_authentication_routes)
             .configure(configure_jwt_routes)
             .configure(configure_openid_routes)
