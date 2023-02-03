@@ -136,7 +136,6 @@ impl UserRepository for DatabaseUserRepository {
             .await
             .map_err(UserError::Tiberius)?;
 
-        
         Ok(user.with_id(created_id))
     }
 }

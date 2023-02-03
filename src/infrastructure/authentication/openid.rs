@@ -149,6 +149,7 @@ impl OpenIdService {
             .expect("ID token should contain email")
             .to_string();
 
+        // return both user object and JWT
         Ok(OpenIdUser { 
             email, 
             groups: vec![String::from("todo")]

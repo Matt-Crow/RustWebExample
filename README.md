@@ -10,11 +10,18 @@ An example web application using Rust for the backend.
    and update.
 5. run the app with `cargo run -- --setup`
 
+## Setting up OpenID
+This demo uses OpenID to authenticate users with an external service. I tested 
+it with [https://auth0.com/](Auth0), but other identity providers should work.
+Regardless of which provider you choose, you'll need their URL, as well as a
+client-ID and -secret. Be sure to add `http://localhost:8080/openid` as a 
+callback URL!
+
 ## Required Environment Variables
 - `JWT_SECRET`: the secret key to use for signing JSON web tokens
 - `TIBERIUS_USERNAME`: the username Tiberius will log in as to the MSSQL server
 - `TIBERIUS_PASSWORD`: the password Tiberius will use to log in to the MSSQL server
-- `OPENDID_URL`: the URL for the OpenID provider to use. Formatted as `https://example.com/`
+- `OPENID_URL`: the URL for the OpenID provider to use. Formatted as `https://example.com/`
 - `OPENID_CLIENT_ID`: the app's client ID registered with the OpenID provider
 - `OPENID_CLIENT_SECRET`: the app's secret registered with the OpenID provider
 

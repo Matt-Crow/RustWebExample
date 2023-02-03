@@ -44,6 +44,11 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .app_data(sp.clone()) // app data is thread-safe
             .app_data(oid.clone())
+            // the session allows us to persist data across requests and associate
+            // it with a single user. This demo uses a cookie to store all the
+            // session data, as the Actix Session package does not support storing
+            // in MSSQL. Ideally, we would store a key in the user's cookies, and
+            // their associated data in MSSQL
             .wrap(SessionMiddleware::new(
                 CookieSessionStore::default(),
                 Key::from("super-secret-key-that-must-be-at-least-64-bytes-long-so-I-guess-I-will-just-have-to-make-something-up".as_bytes())
