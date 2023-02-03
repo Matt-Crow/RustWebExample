@@ -1,6 +1,6 @@
 // this module is responsible for user-related details
 
-use std::collections::HashSet;
+use std::{collections::HashSet, fmt::Display};
 
 use async_trait::async_trait;
 use serde::Serialize;
@@ -93,28 +93,56 @@ impl UserError {
     }
 }
 
+impl Display for UserError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::DuplicateUsername(_) => write!(f, "todo rm"),
+            Self::NotImplemented => write!(f, "not implemented"),
+            Self::Other(msg) => write!(f, "Other error: {}", msg),
+            Self::Tiberius(inner) => write!(f, "Tiberius error: {}", inner)
+        }
+    }
+}
+
 pub struct UserService {
-    repository: Box<dyn UserRepository>
+    user_repository: Box<dyn UserRepository>,
+    group_repository: Box<dyn GroupRepository>
 }
 
 impl UserService {
 
-    pub fn new<T>(repository: T) -> Self 
-    where T: UserRepository + 'static {
+    pub fn new<T, U>(user_repository: T, group_repository: U) -> Self 
+    where 
+        T: UserRepository + 'static,
+        U: GroupRepository + 'static
+    {
         Self {
-            repository: Box::new(repository)
+            user_repository: Box::new(user_repository),
+            group_repository: Box::new(group_repository)
         }
     }
 
     pub async fn create(&mut self, user: &User) -> Result<User, UserError> {
         match self.get_user_by_name(&user.name()).await? {
             Some(_) => Err(UserError::duplicate_username(&user.name())),
-            None => self.repository.insert_user(user).await
+            None => self.user_repository.insert_user(user).await
         }
     }
 
     pub async fn get_user_by_name(&mut self, name: &str) -> Result<Option<User>, UserError> {
-        self.repository.get_user_by_name(name).await
+        self.user_repository.get_user_by_name(name).await
+    }
+
+    pub async fn get_user_by_email(&mut self, email: &str) -> Result<User, UserError> {
+        let mut user = User::new(email);
+        let groups = self.group_repository.get_group_by_email(email)
+            .await?;
+        
+        for group in groups {
+            user.add_to_group(&group);
+        }
+
+        Ok(user)
     }
 }
 
@@ -132,6 +160,20 @@ pub trait UserRepository {
     async fn insert_user(&mut self, user: &User) -> Result<User, UserError>;
 }
 
+/// Designates something as a backing store for mapping emails to groups
+#[async_trait]
+pub trait GroupRepository {
+
+    /// Attempts to add a mapping between the given email and group.
+    /// It is an error to add a group to a email who already belongs to that 
+    /// group.
+    async fn add_email_to_group(&mut self, email: &str, group: &str) -> Result<(), UserError>;
+
+    /// Returns all groups associated with the given email.
+    /// Note that an email can be associated with no groups.
+    async fn get_group_by_email(&mut self, email: &str) -> Result<Vec<String>, UserError>;
+}
+
 #[cfg(test)]
 pub mod tests {
     use mockall::mock;
@@ -139,14 +181,26 @@ pub mod tests {
     use super::*;
 
     mock! {
-        Dummy {
+        UserDummy {
 
         }
 
         #[async_trait]
-        impl UserRepository for Dummy {
+        impl UserRepository for UserDummy {
             async fn get_user_by_name(&mut self, name: &str) -> Result<Option<User>, UserError>;
             async fn insert_user(&mut self, user: &User) -> Result<User, UserError>;
+        }
+    }
+
+    mock! {
+        GroupDummy {
+
+        }
+
+        #[async_trait]
+        impl GroupRepository for GroupDummy {
+            async fn add_email_to_group(&mut self, email: &str, group: &str) -> Result<(), UserError>;
+            async fn get_group_by_email(&mut self, email: &str) -> Result<Vec<String>, UserError>;
         }
     }
 
@@ -172,7 +226,7 @@ pub mod tests {
     #[tokio::test]
     async fn create_user_given_duplicate_username_returns_error() {
         let user = User::new("Foo");
-        let mut repo = MockDummy::new();
+        let mut repo = MockUserDummy::new();
         repo
             .expect_get_user_by_name()
             .once()
@@ -180,7 +234,7 @@ pub mod tests {
         repo
             .expect_insert_user()
             .never();
-        let mut sut = UserService::new(repo);
+        let mut sut = UserService::new(repo, MockGroupDummy::new());
         let result = sut.create(&user).await;
 
         assert!(result.is_err());
@@ -189,7 +243,7 @@ pub mod tests {
     #[tokio::test]
     async fn create_user_given_new_username_inserts_in_repository() {
         let user = User::new("Foo");
-        let mut repo = MockDummy::new();
+        let mut repo = MockUserDummy::new();
         repo
             .expect_get_user_by_name()
             .once()
@@ -198,7 +252,7 @@ pub mod tests {
             .expect_insert_user()
             .once()
             .returning(|u| Ok(u.with_id(1)));
-        let mut sut = UserService::new(repo);
+        let mut sut = UserService::new(repo, MockGroupDummy::new());
 
         let result = sut.create(&user).await;
 
@@ -208,16 +262,48 @@ pub mod tests {
 
     #[tokio::test]
     async fn get_user_by_name_forwards_to_repository() {
-        let mut repo = MockDummy::new();
+        let mut repo = MockUserDummy::new();
         repo
             .expect_get_user_by_name()
             .once()
             .returning(|_name| Ok(None));
-        let mut sut = UserService::new(repo);
+        let mut sut = UserService::new(repo, MockGroupDummy::new());
 
         let result = sut.get_user_by_name("Foo").await;
 
         assert!(result.is_ok());
         assert!(result.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn get_user_by_email_given_empty_repositories_is_ok_and_has_email() {
+        let mut group_repo = MockGroupDummy::new();
+        group_repo
+            .expect_get_group_by_email()
+            .returning(|_email| Ok(Vec::new()));
+        let mut sut = UserService::new(MockUserDummy::new(), group_repo);
+        let email = "foo.bar@baz.qux";
+
+        let result = sut.get_user_by_email(email).await;
+
+        assert!(result.is_ok());
+        assert!(result.unwrap().name == email);
+    }
+
+    #[tokio::test]
+    async fn get_user_by_email_given_stored_groups_returns_email_and_groups() {
+        let mut group_repo = MockGroupDummy::new();
+        group_repo
+            .expect_get_group_by_email()
+            .returning(|_email| Ok(vec![String::from("foo"), String::from("bar")]));
+        let mut sut = UserService::new(MockUserDummy::new(), group_repo);
+
+        let result = sut.get_user_by_email("foo.bar@baz.qux").await;
+
+        assert!(result.is_ok());
+        let user = result.unwrap();
+        assert!(user.name == "foo.bar@baz.qux");
+        assert!(user.groups().contains(&String::from("foo")));
+        assert!(user.groups().contains(&String::from("bar")));
     }
 }

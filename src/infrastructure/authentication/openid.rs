@@ -6,10 +6,12 @@
 use std::{env, fmt::{Display, Debug}, error::Error};
 
 use actix_session::Session;
-use actix_web::{web::{ServiceConfig, get, self}, Responder, HttpResponse, error};
+use actix_web::{web::{ServiceConfig, get, self}, HttpResponse, error};
 use openidconnect::{core::{CoreProviderMetadata, CoreClient, CoreResponseType, CoreAuthPrompt}, IssuerUrl, reqwest::async_http_client, ClientId, RedirectUrl, CsrfToken, Nonce, AuthenticationFlow, Scope, ClientSecret, AuthorizationCode};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
+
+use crate::core::service_provider::ServiceProvider;
 
 /// used by main to set up the openid routes
 pub fn configure_openid_routes(cfg: &mut ServiceConfig) {
@@ -43,9 +45,10 @@ async fn login_handler(
 /// we can use to obtain information granted in the scopes
 async fn handle_auth_callback(
     service: web::Data<OpenIdService>,
+    service_provider: web::Data<ServiceProvider>,
     session: Session,
     openid_response: web::Query<AuthenticationCallbackParameters>
-) -> impl Responder {
+) -> actix_web::Result<HttpResponse> {
 
     let nonce: String = session.get("openid-nonce")
         .map_err(error::ErrorBadRequest)?
@@ -59,19 +62,31 @@ async fn handle_auth_callback(
 
     // todo: should this return access token for use as bearer? 
     // looks like it, but I'll want to create my own JWT as bearer
-    service.handle_callback(AuthenticationRequest { 
+    let old_user = service.handle_callback(AuthenticationRequest { 
             params: openid_response.0, 
             old_nonce: nonce, 
             old_state: state 
         })
         .await
-        .map(|user| HttpResponse::Ok().json(user))
-        .map_err(error::ErrorBadRequest)
+        .map_err(error::ErrorBadRequest)?;
+    
+    let mut mutex = service_provider
+        .users()
+        .lock()
+        .await;
+    
+    let new_user = mutex.get_user_by_email(&old_user.email)
+        .await
+        .map_err(error::ErrorInternalServerError)?;
+    
+    Ok(HttpResponse::Ok().json(new_user))
 }
 
 /// provides services related to OpenID
 #[derive(Debug)]
-pub struct OpenIdService(CoreClient);
+pub struct OpenIdService {
+    client: CoreClient
+}
 
 impl OpenIdService {
     
@@ -94,13 +109,15 @@ impl OpenIdService {
                 RedirectUrl::new(String::from("http://localhost:8080/openid")).expect("Expected valid URL")
             );
 
-        Ok(Self(client))
+        Ok(Self {
+            client
+        })
     }
 
     /// creates a new authorization URL and associated security parameters    
     fn generate_auth_url(&self) -> OpenIdUrl {
         
-        let (authorization_url, csrf_state, nonce) = self.0
+        let (authorization_url, csrf_state, nonce) = self.client
             .authorize_url(
                 AuthenticationFlow::<CoreResponseType>::AuthorizationCode, 
                 CsrfToken::new_random, 
@@ -130,7 +147,7 @@ impl OpenIdService {
         }
         
         // exchange authorization code for claims about the user
-        let token_response = self.0
+        let token_response = self.client
             .exchange_code(AuthorizationCode::new(auth_request.params.code))
             .request_async(async_http_client)
             .await
@@ -142,7 +159,7 @@ impl OpenIdService {
             .extra_fields()
             .id_token()
             .expect("should contain ID token")
-            .claims(&self.0.id_token_verifier(), &Nonce::new(auth_request.old_nonce))
+            .claims(&self.client.id_token_verifier(), &Nonce::new(auth_request.old_nonce))
             .map_err(OpenIdError::trace)?;
         
         let email = claims.email()

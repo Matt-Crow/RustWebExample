@@ -10,7 +10,7 @@ use actix_web::{HttpServer, App, web, cookie::Key};
 use actix_web_httpauth::middleware::HttpAuthentication;
 use crate::{
     core::service_provider::ServiceProvider,
-    infrastructure::{routes::configure_hospital_routes, authentication::{jwt::{jwt_auth_middleware, configure_jwt_routes}, routes::configure_authentication_routes, openid::{OpenIdService, configure_openid_routes}}, database::{database_hospital_repository::DatabaseHospitalRepository, database_user_repository::DatabaseUserRepository, pool::make_db_pool}}
+    infrastructure::{routes::configure_hospital_routes, authentication::{jwt::{jwt_auth_middleware, configure_jwt_routes}, routes::configure_authentication_routes, openid::{OpenIdService, configure_openid_routes}}, database::{database_hospital_repository::DatabaseHospitalRepository, database_user_repository::DatabaseUserRepository, pool::make_db_pool, database_group_repository::DatabaseGroupRepository}}
 };
 
 #[actix_web::main]
@@ -35,7 +35,7 @@ async fn main() -> std::io::Result<()> {
 
     // The Rust ecosystem does not appear to have a good Dependency Injection
     // framework, so we have to bundle together the service providers ourselves.
-    let sp = web::Data::new(ServiceProvider::new(hospital_repo, user_repo));
+    let sp = web::Data::new(ServiceProvider::new(hospital_repo, user_repo, DatabaseGroupRepository::new()));
     let oid = web::Data::new(openid_service);    
 
     println!("Starting web server...");
