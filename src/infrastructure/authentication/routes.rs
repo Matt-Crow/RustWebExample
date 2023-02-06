@@ -4,7 +4,7 @@ use serde::Deserialize;
 use crate::core::{service_provider::ServiceProvider, users::User};
 
 pub fn configure_authentication_routes(cfg: &mut ServiceConfig) {
-    cfg.route("/signup", post().to(handle_signup));
+    cfg.route("/signup", post().to(handle_signup)); // rm this?
 }
 
 #[derive(Deserialize)]

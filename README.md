@@ -33,13 +33,12 @@ callback URL!
 `cargo clippy`
 
 ## Demo
-
-TODO: use browser to receive claims, set as bearer
-
 This app demonstrates many of the basic features common to most REST APIs.
 1. run the app and open `Postman`
 2. make a `GET` request to `localhost:8080/api/v1/hospitals` - should receive `401 unauthorized`
-3. `POST` to `localhost:8080/jwt` with the following raw JSON body:
+3. go to `localhost:8080/login` in your browser and sign in with an account. Notice the JWT field
+   OR
+   `POST` to `localhost:8080/jwt` with the following raw JSON body:
    ```
    {
        "email": "you can put anything between these two quotes"

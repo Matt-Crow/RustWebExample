@@ -3,10 +3,10 @@
 use std::{collections::HashSet, fmt::Display};
 
 use async_trait::async_trait;
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 
 /// the system representation of a user
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct User {
 
     /// email must be unique within the user repository
@@ -23,6 +23,10 @@ impl User {
             email: String::from(email),
             groups: HashSet::new()
         }
+    }
+
+    pub fn email(&self) -> String {
+        self.email.clone()
     }
 
     pub fn groups(&self) -> Vec<String> {

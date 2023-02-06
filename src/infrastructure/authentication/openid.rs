@@ -11,7 +11,9 @@ use openidconnect::{core::{CoreProviderMetadata, CoreClient, CoreResponseType, C
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 
-use crate::core::service_provider::ServiceProvider;
+use crate::core::{service_provider::ServiceProvider, users::User};
+
+use super::jwt::make_token;
 
 /// used by main to set up the openid routes
 pub fn configure_openid_routes(cfg: &mut ServiceConfig) {
@@ -60,8 +62,6 @@ async fn handle_auth_callback(
     
     session.purge(); // no longer need session
 
-    // todo: should this return access token for use as bearer? 
-    // looks like it, but I'll want to create my own JWT as bearer
     let old_user = service.handle_callback(AuthenticationRequest { 
             params: openid_response.0, 
             old_nonce: nonce, 
@@ -79,7 +79,19 @@ async fn handle_auth_callback(
         .await
         .map_err(error::ErrorInternalServerError)?;
     
-    Ok(HttpResponse::Ok().json(new_user))
+    let jwt = make_token(&new_user)
+        .map_err(error::ErrorInternalServerError)?;
+    
+    Ok(HttpResponse::Ok().json(CallbackResponse {
+        jwt,
+        user: new_user
+    }))
+}
+
+#[derive(Debug, Serialize)]
+struct CallbackResponse {
+    jwt: String,
+    user: User
 }
 
 /// provides services related to OpenID

@@ -8,6 +8,8 @@ use chrono::{Utc, Duration};
 use jsonwebtoken::{encode, EncodingKey, Header, decode, DecodingKey, Validation, Algorithm};
 use serde::{Deserialize, Serialize};
 
+use crate::core::users::User;
+
 const ISSUER: &str = "https://example.com";
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -16,12 +18,8 @@ struct Claims {
     sub: String, // subject
     aud: String, // receiving audience 
     exp: i64,    // expiration datetime, in seconds from start of 1970
-    iat: i64     // issued datetime, as per exp
-}
-
-#[derive(Debug, Deserialize)]
-struct User {
-    email: String
+    iat: i64,    // issued datetime, as per exp
+    groups: Vec<String> // custom claim
 }
 
 pub fn configure_jwt_routes(cfg: &mut ServiceConfig) {
@@ -30,22 +28,24 @@ pub fn configure_jwt_routes(cfg: &mut ServiceConfig) {
 
 async fn jwt_login_handler(user: Json<User>) -> actix_web::Result<String> {
     // a production system would verify the user's credentials
-    match make_token(&user.0.email) {
+    match make_token(&user.0) {
         Ok(token) => Ok(token),
         Err(e) => Err(ErrorInternalServerError(e))
     }
 } 
 
-fn make_token(email: &str) -> Result<String, jsonwebtoken::errors::Error> {
+/// creates a JWT for the given user
+pub fn make_token(user: &User) -> Result<String, jsonwebtoken::errors::Error> {
     let now = Utc::now();
     let later = now.checked_add_signed(Duration::minutes(30)).unwrap();
 
     let claims = Claims {
         iss: String::from(ISSUER),
-        sub: String::from(email),
+        sub: user.email(),
         aud: String::from(ISSUER),
         exp: later.timestamp(),
         iat: now.timestamp(),
+        groups: user.groups()
     };
     
     encode(
