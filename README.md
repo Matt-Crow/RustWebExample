@@ -1,5 +1,11 @@
 # Rust Web Example
-An example web application using Rust for the backend.
+An example web application using Rust for the backend. It consists of 3 parts:
+1. `admission`: a REST API that allows authenticated users to admit patients to
+   a hospital, unadmit patients from a hospital, and view the patients admitted
+   to a hospital.
+2. `census`: a simple script which retrieves data from the `admission` API and
+   produces a report on how many patients are admitted.
+3. `common`: contains code shared by both other parts.
 
 ## Setting up the database
 1. create a database `RustDB`
@@ -8,7 +14,7 @@ An example web application using Rust for the backend.
    its default schema.
 4. give the Tiberius account permission to create table, delete, insert, select,
    and update.
-5. run the app with `cargo run -- --setup`
+5. run the app with `cargo run -p admission -- --setup`
 
 ## Setting up OpenID
 This demo uses OpenID to authenticate users with an external service. I tested 
@@ -26,7 +32,7 @@ callback URL!
 - `OPENID_CLIENT_SECRET`: the app's secret registered with the OpenID provider
 
 ## Running the App
-`cargo run`
+`cargo run -p admission`
 
 ## Testing the App
 `cargo test`

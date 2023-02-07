@@ -1,4 +1,4 @@
-use super::{hospital_repository::{HospitalRepository, RepositoryError}};
+use super::hospital_repository::{HospitalRepository, RepositoryError};
 use common::hospital::{Hospital, Patient};
 
 pub struct HospitalService {

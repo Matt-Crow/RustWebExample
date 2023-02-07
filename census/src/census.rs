@@ -2,6 +2,7 @@ use std::{collections::HashMap, fmt::Display};
 
 use common::hospital::HospitalDataProvider;
 
+/// conducts censuses of hospital patients
 pub struct CensusService {
     hospital_data_provider: Box<dyn HospitalDataProvider>
 }
