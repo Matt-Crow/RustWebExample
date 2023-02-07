@@ -1,7 +1,5 @@
 // model structs are how the program represents the problem domain
 
-// todo use i32 for IDs
-
 // the serde (SERialize DEserialize) crate helps convert data to & from JSON
 use serde::{Serialize, Deserialize};
 

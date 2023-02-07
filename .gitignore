@@ -1,2 +1,2 @@
 /target
-set-env.txt
+*.secret*
