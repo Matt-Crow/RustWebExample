@@ -1,5 +1,6 @@
 // model structs are how the program represents the problem domain
 
+use async_trait::async_trait;
 // the serde (SERialize DEserialize) crate helps convert data to & from JSON
 use serde::{Serialize, Deserialize};
 
@@ -30,6 +31,14 @@ impl Hospital {
 
     pub fn add_patient(&mut self, patient: Patient) {
         self.patients.push(patient);
+    }
+
+    pub fn name(&self) -> String {
+        self.name.to_owned()
+    }
+
+    pub fn patients(&self) -> Vec<Patient> {
+        self.patients.clone()
     }
 }
 
@@ -89,4 +98,28 @@ impl Clone for Patient {
             name: self.name.to_string()
         }
     }
+}
+
+pub enum Error {
+    ExternalServiceError(String)
+}
+
+impl Error {
+    pub fn external_service_error(msg: impl ToString) -> Self {
+        Self::ExternalServiceError(msg.to_string())
+    }
+}
+
+impl ToString for Error {
+    fn to_string(&self) -> String {
+        match self {
+            Self::ExternalServiceError(msg) => msg.to_owned()
+        }
+    }
+}
+
+// todo should I include the full service for both admission & census?
+#[async_trait]
+pub trait HospitalDataProvider: Send + Sync {
+    async fn get_all_hospitals(&self) -> Result<Vec<Hospital>, Error>;
 }

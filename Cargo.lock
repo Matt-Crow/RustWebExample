@@ -488,6 +488,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "census"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "common",
+ "reqwest",
+ "tokio",
+]
+
+[[package]]
 name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -533,6 +543,7 @@ dependencies = [
 name = "common"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "serde",
 ]
 
