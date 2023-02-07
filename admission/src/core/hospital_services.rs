@@ -1,4 +1,5 @@
-use super::{hospital_models::{Hospital, Patient}, hospital_repository::{HospitalRepository, RepositoryError}};
+use super::{hospital_repository::{HospitalRepository, RepositoryError}};
+use common::hospital::{Hospital, Patient};
 
 pub struct HospitalService {
     repository: Box<dyn HospitalRepository + 'static>
@@ -30,7 +31,7 @@ impl HospitalService {
 
 #[cfg(test)]
 pub mod tests {
-    use crate::core::hospital_models::Patient;
+    use common::hospital::Patient;
 
     use super::*;
     use async_trait::async_trait;

@@ -230,6 +230,7 @@ dependencies = [
  "bb8",
  "bb8-tiberius",
  "chrono",
+ "common",
  "futures-util",
  "jsonwebtoken",
  "mockall",
@@ -526,6 +527,13 @@ checksum = "3538270d33cc669650c4b093848450d380def10c331d38c768e34cac80576e6e"
 dependencies = [
  "termcolor",
  "unicode-width",
+]
+
+[[package]]
+name = "common"
+version = "0.1.0"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

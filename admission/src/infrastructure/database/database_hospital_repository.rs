@@ -12,7 +12,8 @@ use bb8_tiberius::ConnectionManager;
 use futures_util::{StreamExt, future, TryStreamExt};
 use tiberius::ExecuteResult;
 
-use crate::core::{hospital_repository::{HospitalRepository, RepositoryError}, hospital_models::{Hospital, Patient}};
+use crate::core::{hospital_repository::{HospitalRepository, RepositoryError}};
+use common::hospital::{Hospital, Patient};
 
 pub struct DatabaseHospitalRepository {
     pool: Arc<Pool<ConnectionManager>> // does this need an arc?
