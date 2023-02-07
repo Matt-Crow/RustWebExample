@@ -10,7 +10,7 @@ use actix_web::{HttpServer, App, web, cookie::Key};
 use actix_web_httpauth::middleware::HttpAuthentication;
 use crate::{
     core::service_provider::ServiceProvider,
-    infrastructure::{routes::configure_hospital_routes, authentication::{jwt::{jwt_auth_middleware, configure_jwt_routes}, routes::configure_authentication_routes, openid::{OpenIdService, configure_openid_routes}}, database::{database_hospital_repository::DatabaseHospitalRepository, pool::make_db_pool, database_group_repository::DatabaseGroupRepository}}
+    infrastructure::{routes::configure_hospital_routes, authentication::{jwt::{jwt_auth_middleware, configure_jwt_routes}, openid::{OpenIdService, configure_openid_routes}}, database::{database_hospital_repository::DatabaseHospitalRepository, pool::make_db_pool, database_group_repository::DatabaseGroupRepository}}
 };
 
 #[actix_web::main]
@@ -57,7 +57,6 @@ async fn main() -> std::io::Result<()> {
                 CookieSessionStore::default(),
                 Key::from("super-secret-key-that-must-be-at-least-64-bytes-long-so-I-guess-I-will-just-have-to-make-something-up".as_bytes())
             ))
-            .configure(configure_authentication_routes)
             .configure(configure_jwt_routes)
             .configure(configure_openid_routes)
             .service(web::scope("/api/v1") // register API routes

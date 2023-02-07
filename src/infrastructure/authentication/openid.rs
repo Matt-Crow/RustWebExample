@@ -62,7 +62,7 @@ async fn handle_auth_callback(
     
     session.purge(); // no longer need session
 
-    let old_user = service.handle_callback(AuthenticationRequest { 
+    let email = service.handle_callback(AuthenticationRequest { 
             params: openid_response.0, 
             old_nonce: nonce, 
             old_state: state 
@@ -75,7 +75,7 @@ async fn handle_auth_callback(
         .lock()
         .await;
     
-    let new_user = mutex.get_user_by_email(&old_user.email)
+    let new_user = mutex.get_user_by_email(&email)
         .await
         .map_err(error::ErrorInternalServerError)?;
     
@@ -136,7 +136,6 @@ impl OpenIdService {
                 Nonce::new_random
             )
             .add_scope(Scope::new(String::from("email")))
-            .add_scope(Scope::new(String::from("profile")))
             .add_prompt(CoreAuthPrompt::Consent)
             .url();
 
@@ -147,11 +146,12 @@ impl OpenIdService {
         }
     }
 
-    /// called after a user authenticates with the OpenID provider
+    /// called after a user authenticates with the OpenID provider, returns 
+    /// email
     async fn handle_callback(
         &self, 
         auth_request: AuthenticationRequest
-    ) -> Result<OpenIdUser, OpenIdError> {
+    ) -> Result<String, OpenIdError> {
 
         // validate CSRF token        
         if auth_request.old_state != auth_request.params.state {
@@ -178,11 +178,7 @@ impl OpenIdService {
             .expect("ID token should contain email")
             .to_string();
 
-        // return both user object and JWT
-        Ok(OpenIdUser { 
-            email, 
-            groups: vec![String::from("todo")]
-        })
+        Ok(email)
     }
 }
 
@@ -248,12 +244,6 @@ impl Display for OpenIdError {
             Self::BadIssuer(url) => write!(f, "Bad issuer URL: {}", url)
         }
     }
-}
-
-#[derive(Debug, Serialize)]
-pub struct OpenIdUser {
-    email: String,
-    groups: Vec<String>
 }
 
 /// authorization URL & associated security parameters

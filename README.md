@@ -41,7 +41,11 @@ This app demonstrates many of the basic features common to most REST APIs.
    `POST` to `localhost:8080/jwt` with the following raw JSON body:
    ```
    {
-       "email": "you can put anything between these two quotes"
+      "email": "you can put anything between these two quotes"
+      "groups": [
+         "group 1",
+         "group 2"
+      ]
    }
    ```
    you should receive a long string with 2 '.'s in it
@@ -56,10 +60,13 @@ This app demonstrates many of the basic features common to most REST APIs.
        "name": "John Brown"
    }
    ```
-8. `GET localhost:8080/api/v1/hospitals/napa`, then locate John Brown's ID
-9. unadmit John Brown using `DELETE localhost:8080/api/v1/hospitals/napa/ID`,
+   You should receive `401 unauthorized`.
+8. `POST` to `localhost:8080/jwt`, but this time make sure you have the `admin` group.
+9. repeat step 7 after setting your new bearer token
+10. `GET localhost:8080/api/v1/hospitals/napa`, then locate John Brown's ID
+11. unadmit John Brown using `DELETE localhost:8080/api/v1/hospitals/napa/ID`,
    where `ID` is John Brown's ID from the previous step. You should receive `204 No Content`.
-10. `GET localhost:8080/api/v1/hospitals/napa` to confirm John Brown has been
+12. `GET localhost:8080/api/v1/hospitals/napa` to confirm John Brown has been
     unadmitted.
 
 ## Libraries used

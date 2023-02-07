@@ -109,20 +109,6 @@ impl UserService {
     }
 }
 
-/// Designates something as a backing store for Users.
-/// Each method returns a UserError when a problem occurs when interacting with
-/// the backing store.
-#[async_trait]
-//#[automock] // creates test mock of this dependency
-pub trait UserRepository {
-    
-    /// returns the user with the given email, or None if no such user exists
-    async fn get_user_by_email(&mut self, email: &str) -> Result<Option<User>, UserError>;
-
-    /// inserts a new user into the backing store
-    async fn insert_user(&mut self, user: &User) -> Result<User, UserError>;
-}
-
 /// Designates something as a backing store for mapping emails to groups
 #[async_trait]
 pub trait GroupRepository {
