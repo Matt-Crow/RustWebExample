@@ -1,30 +1,4 @@
-[package]
-name = "rust_web_example"
-version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-actix-web = "4"
-serde = { version = "1.0", features = ["derive"] }
-tiberius = "0.11.3"
-tokio = "1.23.0"
-reqwest = "0.11.13"
-actix-web-httpauth = "0.8.0"
-jsonwebtoken = "8.2.0"
-chrono = "0.4.23"
-bb8 = "0.8.0"
-bb8-tiberius = "0.13.0"
-futures-util = "0.3.25"
-async-trait = "0.1.61"
-openidconnect = { version = "2.5.0", features = ["accept-rfc3339-timestamps"] }
-actix-session = { version = "0.7.2", features = ["cookie-session"] }
-
-# https://github.com/prisma/tiberius/issues/145#issuecomment-829044670
-[dependencies.tokio-util]
-version = "0.6"
-features = ["compat"]
-
-[dev-dependencies]
-mockall = "0.11.3"
+[workspace]
+members = [
+    "admission"
+]
