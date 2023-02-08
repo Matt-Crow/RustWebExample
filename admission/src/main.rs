@@ -8,8 +8,9 @@ use std::env;
 use actix_session::{SessionMiddleware, storage::CookieSessionStore};
 use actix_web::{HttpServer, App, web, cookie::Key};
 use actix_web_httpauth::middleware::HttpAuthentication;
+use tokio::sync::Mutex;
 use crate::{
-    core::service_provider::ServiceProvider,
+    core::{users::UserService, hospital_services::HospitalService},
     infrastructure::{routes::configure_hospital_routes, authentication::{jwt::{jwt_auth_middleware, configure_jwt_routes}, openid::{OpenIdService, configure_openid_routes}}, database::{database_hospital_repository::DatabaseHospitalRepository, pool::make_db_pool, database_group_repository::DatabaseGroupRepository}}
 };
 
@@ -37,17 +38,19 @@ async fn main() -> std::io::Result<()> {
             .expect("Should be able to setup group repository");
     }
 
-    // The Rust ecosystem does not appear to have a good Dependency Injection
-    // framework, so we have to bundle together the service providers ourselves.
-    let sp = web::Data::new(ServiceProvider::new(hospital_repo, group_repo));
-    let oid = web::Data::new(openid_service);    
+    // Actix web uses web::Data to share resources across requests, though they
+    // must be wrapped in a Mutex for synchronization
+    let hosp_service = web::Data::new(Mutex::new(HospitalService::new(hospital_repo)));
+    let user_service = web::Data::new(Mutex::new(UserService::new(group_repo)));
+    let oid = web::Data::new(openid_service); // non-writing service, so no mutex needed
 
     println!("Starting web server...");
     
     HttpServer::new(move || {
         App::new()
-            .app_data(sp.clone()) // app data is thread-safe
+            .app_data(hosp_service.clone()) // app data is thread-safe
             .app_data(oid.clone())
+            .app_data(user_service.clone())
             // the session allows us to persist data across requests and associate
             // it with a single user. This demo uses a cookie to store all the
             // session data, as the Actix Session package does not support storing

@@ -111,7 +111,7 @@ impl UserService {
 
 /// Designates something as a backing store for mapping emails to groups
 #[async_trait]
-pub trait GroupRepository {
+pub trait GroupRepository: Send + Sync {
 
     /// Attempts to add a mapping between the given email and group.
     /// It is an error to add a group to a email who already belongs to that 

@@ -1,8 +1,9 @@
 // routes connect HTTP verbs & URLs to backend services
 
 use actix_web::{web::{ServiceConfig, resource, get, Json, self, post, delete}, error::{ErrorInternalServerError, ErrorNotFound}, Responder, HttpResponse};
+use tokio::sync::Mutex;
 
-use crate::core::{service_provider::ServiceProvider};
+use crate::core::hospital_services::HospitalService;
 use common::hospital::{Hospital, Patient};
 
 pub fn configure_hospital_routes(cfg: &mut ServiceConfig) {
@@ -26,24 +27,23 @@ pub fn configure_hospital_routes(cfg: &mut ServiceConfig) {
 
 async fn get_all_hospitals(
     // web::Data grabs shared state registered during app creation
-    services: web::Data<ServiceProvider>
+    hospitals: web::Data<Mutex<HospitalService>>
 ) -> actix_web::Result<Json<Vec<Hospital>>> {
     // actix web has its own Result type, not to be confused with Rust's
     // since the app state is shared across threads, need mutex to use it
-    let mutex = services.hospitals();
-    let mut getter = mutex.lock().await;
+    let mut mutex = hospitals.lock().await;
 
-    match getter.get_all_hospitals().await {
+    match mutex.get_all_hospitals().await {
         Ok(hospitals) => Ok(Json(hospitals)),
         Err(error) => Err(ErrorInternalServerError(error))
     }
 }
 
 async fn get_hospital_by_name(
-    services: web::Data<ServiceProvider>,
+    hospitals: web::Data<Mutex<HospitalService>>,
     name: web::Path<String>
 ) -> actix_web::Result<Json<Hospital>> {
-    let mut getter = services.hospitals().lock().await;
+    let mut getter = hospitals.lock().await;
 
     match getter.get_hospital_by_name(&name).await {
         Ok(maybe_hospital) => match maybe_hospital {
@@ -57,11 +57,11 @@ async fn get_hospital_by_name(
 }
 
 async fn admit_patient(
-    services: web::Data<ServiceProvider>,
+    hospitals: web::Data<Mutex<HospitalService>>,
     hospital_name: web::Path<String>,
     patient: Json<Patient>
 ) -> actix_web::Result<Json<Hospital>> {
-    let mut updater = services.hospitals().lock().await;
+    let mut updater = hospitals.lock().await;
 
     match updater.admit_patient_to_hospital(patient.0, &hospital_name).await {
         Ok(hospital) => Ok(Json(hospital)),
@@ -70,10 +70,10 @@ async fn admit_patient(
 }
 
 async fn unadmit_patient(
-    services: web::Data<ServiceProvider>,
+    hospitals: web::Data<Mutex<HospitalService>>,
     path: web::Path<(String, u32)>,
 ) -> impl Responder {
-    let mut deleter = services.hospitals().lock().await;
+    let mut deleter = hospitals.lock().await;
     let hospital_name = &path.0;
     let patient_id = path.1;
 

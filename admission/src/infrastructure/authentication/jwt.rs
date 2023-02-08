@@ -72,10 +72,10 @@ pub async fn jwt_auth_middleware(
 
             // check if any of the user's groups are authorized to perform the request
             if is_get(&request) || claims.user.groups().iter().any(|g| is_group_authorized(g, &request)) {
-                println!("{}", "Authorized.");
+                println!("Authorized.");
                 Ok(request)
             } else {
-                println!("{}", "Unauthorized.");
+                println!("Unauthorized.");
                 Err((ErrorUnauthorized("You do not belong to any group authorized to access this resource"), request))
             }
         },
