@@ -71,9 +71,11 @@ pub async fn jwt_auth_middleware(
             println!("Request: {:#?}", request);
 
             // check if any of the user's groups are authorized to perform the request
-            if claims.user.groups().iter().any(|g| is_group_authorized(g, &request)) {
+            if is_get(&request) || claims.user.groups().iter().any(|g| is_group_authorized(g, &request)) {
+                println!("{}", "Authorized.");
                 Ok(request)
             } else {
+                println!("{}", "Unauthorized.");
                 Err((ErrorUnauthorized("You do not belong to any group authorized to access this resource"), request))
             }
         },
@@ -99,6 +101,10 @@ fn decode_token(token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
     }
 }
 
-fn is_group_authorized(group: &str, request: &ServiceRequest) -> bool {
-    request.method() == Method::GET || group == "admin"
+fn is_get(request: &ServiceRequest) -> bool {
+    request.method() == Method::GET
+}
+
+fn is_group_authorized(group: &str, _request: &ServiceRequest) -> bool {
+    group == "admin"
 }

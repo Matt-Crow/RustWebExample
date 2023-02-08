@@ -1,6 +1,7 @@
 // model structs are how the program represents the problem domain
 
 use async_trait::async_trait;
+use std::fmt::Debug;
 // the serde (SERialize DEserialize) crate helps convert data to & from JSON
 use serde::{Serialize, Deserialize};
 
@@ -105,8 +106,8 @@ pub enum Error {
 }
 
 impl Error {
-    pub fn external_service_error(msg: impl ToString) -> Self {
-        Self::ExternalServiceError(msg.to_string())
+    pub fn external_service_error(msg: impl Debug) -> Self {
+        Self::ExternalServiceError(format!("External service error: {:#?}", msg))
     }
 }
 
