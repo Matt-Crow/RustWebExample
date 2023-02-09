@@ -12,7 +12,7 @@ use bb8_tiberius::ConnectionManager;
 use futures_util::{StreamExt, future, TryStreamExt};
 use tiberius::ExecuteResult;
 
-use crate::core::{hospital_repository::{HospitalRepository, RepositoryError}};
+use crate::core::hospital_services::{HospitalRepository, RepositoryError};
 use common::hospital::{Hospital, Patient};
 
 pub struct DatabaseHospitalRepository {

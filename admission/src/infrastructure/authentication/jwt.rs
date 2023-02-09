@@ -9,7 +9,7 @@ use jsonwebtoken::{encode, EncodingKey, Header, decode, DecodingKey, Validation,
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
 
-use crate::core::users::User;
+use common::user::User;
 
 const ISSUER: &str = "https://example.com";
 

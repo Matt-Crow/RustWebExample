@@ -1,6 +1,6 @@
 // Declare which modules (folders) should be compiled / loaded.
 // These are searched recursively to load any of their declared modules as well.
-pub mod core; // can declare modules as public in case other programs need them
+mod core; // can declare modules as public in case other programs need them
 mod infrastructure;
 
 use std::env;

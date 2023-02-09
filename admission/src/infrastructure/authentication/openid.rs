@@ -12,8 +12,8 @@ use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
-use crate::core::users::{User, UserService};
-
+use crate::core::users::UserService;
+use common::user::User;
 use super::jwt::make_token;
 
 /// used by main to set up the openid routes
