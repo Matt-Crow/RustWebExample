@@ -2,6 +2,7 @@
 // These are searched recursively to load any of their declared modules as well.
 mod core; // can declare modules as public in case other programs need them
 mod infrastructure;
+mod patient_services;
 
 use std::env;
 
@@ -11,7 +12,7 @@ use actix_web_httpauth::middleware::HttpAuthentication;
 use tokio::sync::Mutex;
 use crate::{
     core::{users::UserService, hospital_services::HospitalService},
-    infrastructure::{routes::configure_hospital_routes, authentication::{jwt::{jwt_auth_middleware, configure_jwt_routes}, openid::{OpenIdService, configure_openid_routes}}, database::{database_hospital_repository::DatabaseHospitalRepository, pool::make_db_pool, database_group_repository::DatabaseGroupRepository}}
+    infrastructure::{routes::configure_hospital_routes, authentication::{jwt::{jwt_auth_middleware, configure_jwt_routes}, openid::{OpenIdService, configure_openid_routes}}, database::{database_hospital_repository::DatabaseHospitalRepository, pool::make_db_pool, database_group_repository::DatabaseGroupRepository, database_patient_repository::DatabasePatientRepository}}, patient_services::PatientService
 };
 
 #[actix_web::main]
@@ -27,6 +28,7 @@ async fn main() -> std::io::Result<()> {
     
     let mut hospital_repo = DatabaseHospitalRepository::new(pool.clone());
     let mut group_repo = DatabaseGroupRepository::new(pool.clone());
+    let patient_repo = DatabasePatientRepository::new(pool.clone());
 
     let args: Vec<String> = env::args().collect();
     if args.iter().any(|arg| arg == "--setup") {
@@ -42,6 +44,7 @@ async fn main() -> std::io::Result<()> {
     // must be wrapped in a Mutex for synchronization
     let hosp_service = web::Data::new(Mutex::new(HospitalService::new(hospital_repo)));
     let user_service = web::Data::new(Mutex::new(UserService::new(group_repo)));
+    let patient_service = web::Data::new(Mutex::new(PatientService::new(patient_repo)));
     let oid = web::Data::new(openid_service); // non-writing service, so no mutex needed
 
     println!("Starting web server...");
@@ -49,6 +52,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(hosp_service.clone()) // app data is thread-safe
+            .app_data(patient_service.clone())
             .app_data(oid.clone())
             .app_data(user_service.clone())
             // the session allows us to persist data across requests and associate

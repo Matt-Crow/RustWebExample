@@ -59,8 +59,7 @@ impl PartialEq for Hospital {
     }
 }
 
-#[derive(Debug)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Patient {
     id: Option<u32>,
     name: String
@@ -89,6 +88,10 @@ impl Patient {
 
     pub fn name(&self) -> String {
         self.name.to_owned()
+    }
+
+    pub fn id(&self) -> Option<u32> {
+        self.id.to_owned()
     }
 }
 

@@ -1,9 +1,9 @@
 // routes connect HTTP verbs & URLs to backend services
 
-use actix_web::{web::{ServiceConfig, resource, get, Json, self, post, delete}, error::{ErrorInternalServerError, ErrorNotFound}, Responder, HttpResponse};
+use actix_web::{web::{ServiceConfig, resource, get, Json, self, post, delete}, error::{ErrorInternalServerError, ErrorNotFound, ErrorBadRequest}, Responder, HttpResponse};
 use tokio::sync::Mutex;
 
-use crate::core::hospital_services::HospitalService;
+use crate::{core::hospital_services::HospitalService, patient_services::{PatientService, PatientError}};
 use common::hospital::{Hospital, Patient};
 
 pub fn configure_hospital_routes(cfg: &mut ServiceConfig) {
@@ -22,6 +22,11 @@ pub fn configure_hospital_routes(cfg: &mut ServiceConfig) {
         resource("/hospitals/{name}/{patient_id}")
             .name("hospital_patients")
             .route(delete().to(unadmit_patient))
+    );
+    cfg.service(
+        resource("/waitlist")
+            .name("waitlist")
+            .route(post().to(waitlist_post_handler))  
     );
 }
 
@@ -80,5 +85,20 @@ async fn unadmit_patient(
     match deleter.unadmit_patient_from_hospital(patient_id, hospital_name).await {
         Ok(_) => Ok(HttpResponse::NoContent().body("")),
         Err(e) => Err(ErrorInternalServerError(e))
+    }
+}
+
+async fn waitlist_post_handler(
+    patients: web::Data<Mutex<PatientService>>,
+    patient: Json<Patient>
+) -> impl Responder {
+    let mut service = patients.lock().await;
+
+    match service.add_patient_to_waitlist(&patient.0).await {
+        Ok(stored) => Ok(HttpResponse::Created().json(stored)),
+        Err(e) => match e {
+            PatientError::AlreadyExists(id) => Err(ErrorBadRequest(format!("patient with ID {} already exists", id))),
+            PatientError::Repository(inner) => Err(ErrorInternalServerError(inner))
+        }
     }
 }
