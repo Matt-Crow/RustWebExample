@@ -28,7 +28,7 @@ async fn main() -> std::io::Result<()> {
     
     let mut hospital_repo = DatabaseHospitalRepository::new(pool.clone());
     let mut group_repo = DatabaseGroupRepository::new(pool.clone());
-    let patient_repo = DatabasePatientRepository::new(pool.clone());
+    let mut patient_repo = DatabasePatientRepository::new(pool.clone());
 
     let args: Vec<String> = env::args().collect();
     if args.iter().any(|arg| arg == "--setup") {
@@ -38,6 +38,9 @@ async fn main() -> std::io::Result<()> {
         group_repo.setup()
             .await
             .expect("Should be able to setup group repository");
+        patient_repo.setup()
+            .await
+            .expect("Should be able to setup patient repository");
     }
 
     // Actix web uses web::Data to share resources across requests, though they

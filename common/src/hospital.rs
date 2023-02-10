@@ -1,7 +1,7 @@
 // model structs are how the program represents the problem domain
 
 use async_trait::async_trait;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 // the serde (SERialize DEserialize) crate helps convert data to & from JSON
 use serde::{Serialize, Deserialize};
 
@@ -62,7 +62,8 @@ impl PartialEq for Hospital {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Patient {
     id: Option<u32>,
-    name: String
+    name: String,
+    status: AdmissionStatus
 }
 
 impl PartialEq for Patient {
@@ -75,14 +76,24 @@ impl Patient {
     pub fn new(name: &str) -> Self {
         Self {
             id: None,
-            name: name.to_owned()
+            name: name.to_owned(),
+            status: AdmissionStatus::New
         }
     }
 
     pub fn with_id(&self, id: u32) -> Self {
         Self {
             id: Some(id),
-            name: self.name.to_owned()
+            name: self.name.to_owned(),
+            status: self.status.clone()
+        }
+    }
+
+    pub fn with_status(&self, status: AdmissionStatus) -> Self {
+        Self {
+            id: self.id.to_owned(),
+            name: self.name.to_owned(),
+            status
         }
     }
 
@@ -93,13 +104,45 @@ impl Patient {
     pub fn id(&self) -> Option<u32> {
         self.id.to_owned()
     }
+
+    pub fn status(&self) -> AdmissionStatus {
+        self.status.to_owned()
+    }
 }
 
 impl Clone for Patient {
     fn clone(&self) -> Self {
         Self {
             id: self.id,
-            name: self.name.to_string()
+            name: self.name.to_string(),
+            status: self.status.clone()
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub enum AdmissionStatus {
+    New,
+    OnWaitlist,
+    Admitted(u32)
+}
+
+impl Clone for AdmissionStatus {
+    fn clone(&self) -> Self {
+        match self {
+            Self::New => Self::New,
+            Self::OnWaitlist => Self::OnWaitlist,
+            Self::Admitted(id) => Self::Admitted(*id),
+        }
+    }
+}
+
+impl Display for AdmissionStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::New => write!(f, "new patient"),
+            Self::OnWaitlist => write!(f, "on waitlist"),
+            Self::Admitted(id) => write!(f, "admitted to hospital with ID {}", id)
         }
     }
 }

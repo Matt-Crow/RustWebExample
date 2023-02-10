@@ -32,6 +32,7 @@ pub trait PatientRepository: Send + Sync {
     async fn store_patient(&mut self, patient: &Patient) -> Result<Patient, PatientError>;
 }
 
+#[derive(Debug)]
 pub enum PatientError {
     AlreadyExists(u32),
     Repository(Box<dyn Error + 'static>)
