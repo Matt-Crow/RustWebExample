@@ -1,10 +1,11 @@
 // routes connect HTTP verbs & URLs to backend services
 
 use actix_web::{web::{ServiceConfig, resource, get, Json, self, post, delete}, error::{ErrorInternalServerError, ErrorNotFound, ErrorBadRequest}, Responder, HttpResponse};
+use serde::Deserialize;
 use tokio::sync::Mutex;
 
 use crate::{core::hospital_services::HospitalService, patient_services::{PatientService, PatientError}};
-use common::hospital::{Hospital, Patient};
+use common::hospital::{Hospital, Patient, AdmissionStatus};
 
 pub fn configure_hospital_routes(cfg: &mut ServiceConfig) {
     cfg.service(
@@ -61,14 +62,22 @@ async fn get_hospital_by_name(
     }
 }
 
+#[derive(Debug, Deserialize)]
+struct NewPatient {
+    name: String
+}
+
 async fn admit_patient(
     hospitals: web::Data<Mutex<HospitalService>>,
     hospital_name: web::Path<String>,
-    patient: Json<Patient>
+    patient: Json<NewPatient>
 ) -> actix_web::Result<Json<Hospital>> {
     let mut updater = hospitals.lock().await;
 
-    match updater.admit_patient_to_hospital(patient.0, &hospital_name).await {
+    let patient = Patient::new(&patient.name)
+        .with_random_id();
+
+    match updater.admit_patient_to_hospital(patient, &hospital_name).await {
         Ok(hospital) => Ok(Json(hospital)),
         Err(e) => Err(ErrorInternalServerError(e))
     }
@@ -76,7 +85,7 @@ async fn admit_patient(
 
 async fn unadmit_patient(
     hospitals: web::Data<Mutex<HospitalService>>,
-    path: web::Path<(String, u32)>,
+    path: web::Path<(String, uuid::Uuid)>,
 ) -> impl Responder {
     let mut deleter = hospitals.lock().await;
     let hospital_name = &path.0;
@@ -90,11 +99,14 @@ async fn unadmit_patient(
 
 async fn waitlist_post_handler(
     patients: web::Data<Mutex<PatientService>>,
-    patient: Json<Patient>
+    patient: Json<NewPatient>
 ) -> impl Responder {
     let mut service = patients.lock().await;
 
-    match service.add_patient_to_waitlist(&patient.0).await {
+    let patient = Patient::new(&patient.name)
+        .with_status(AdmissionStatus::New);
+
+    match service.add_patient_to_waitlist(&patient).await {
         Ok(stored) => Ok(HttpResponse::Created().json(stored)),
         Err(e) => match e {
             PatientError::AlreadyExists(id) => Err(ErrorBadRequest(format!("patient with ID {} already exists", id))),

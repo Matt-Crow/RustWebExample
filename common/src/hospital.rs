@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use std::fmt::{Debug, Display};
 // the serde (SERialize DEserialize) crate helps convert data to & from JSON
 use serde::{Serialize, Deserialize};
+use uuid::Uuid;
 
 #[derive(Debug)]
 #[derive(Serialize, Deserialize)] // allows this to be converted to & from JSON
@@ -61,7 +62,7 @@ impl PartialEq for Hospital {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Patient {
-    id: Option<u32>,
+    id: Option<Uuid>,
     name: String,
     status: AdmissionStatus
 }
@@ -81,12 +82,16 @@ impl Patient {
         }
     }
 
-    pub fn with_id(&self, id: u32) -> Self {
+    pub fn with_id(&self, id: Uuid) -> Self {
         Self {
             id: Some(id),
             name: self.name.to_owned(),
             status: self.status.clone()
         }
+    }
+
+    pub fn with_random_id(&self) -> Self {
+        self.with_id(Uuid::new_v4())
     }
 
     pub fn with_status(&self, status: AdmissionStatus) -> Self {
@@ -101,7 +106,7 @@ impl Patient {
         self.name.to_owned()
     }
 
-    pub fn id(&self) -> Option<u32> {
+    pub fn id(&self) -> Option<Uuid> {
         self.id.to_owned()
     }
 

@@ -2,6 +2,7 @@ use std::error::Error;
 
 use async_trait::async_trait;
 use common::hospital::Patient;
+use uuid::Uuid;
 
 /// provides services related to patients
 pub struct PatientService {
@@ -34,7 +35,7 @@ pub trait PatientRepository: Send + Sync {
 
 #[derive(Debug)]
 pub enum PatientError {
-    AlreadyExists(u32),
+    AlreadyExists(Uuid),
     Repository(Box<dyn Error + 'static>)
 }
 
@@ -64,7 +65,7 @@ mod tests {
 
     #[tokio::test]
     async fn add_patient_to_waitlist_given_an_existing_patient_returns_error() {
-        let patient = Patient::new("Foo").with_id(1);
+        let patient = Patient::new("Foo").with_random_id();
         let repo = MockPatients::new();
         let mut sut = PatientService::new(repo);
 
@@ -78,7 +79,7 @@ mod tests {
         let patient = Patient::new("Foo");
         let mut repo = MockPatients::new();
         repo.expect_store_patient()
-            .returning(|p| Ok(p.with_id(1)));
+            .returning(|p| Ok(p.with_random_id()));
         let mut sut = PatientService::new(repo);
 
         let result = sut.add_patient_to_waitlist(&patient).await;

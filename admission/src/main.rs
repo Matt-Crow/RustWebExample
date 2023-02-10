@@ -32,13 +32,15 @@ async fn main() -> std::io::Result<()> {
 
     let args: Vec<String> = env::args().collect();
     if args.iter().any(|arg| arg == "--setup") {
-        hospital_repo.setup()
-            .await
-            .expect("Should be able to setup hospital repository");
         group_repo.setup()
             .await
             .expect("Should be able to setup group repository");
-        patient_repo.setup()
+        patient_repo.setup(|| async {
+                hospital_repo.setup()
+                    .await
+                    .expect("Should be able to setup hospital repository");
+                ()
+            })
             .await
             .expect("Should be able to setup patient repository");
     }

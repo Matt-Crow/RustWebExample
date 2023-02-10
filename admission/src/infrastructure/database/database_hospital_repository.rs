@@ -13,7 +13,7 @@ use futures_util::{StreamExt, future, TryStreamExt};
 use tiberius::ExecuteResult;
 
 use crate::core::hospital_services::{HospitalRepository, RepositoryError};
-use common::hospital::{Hospital, Patient};
+use common::hospital::{Hospital, Patient, AdmissionStatus};
 
 pub struct DatabaseHospitalRepository {
     pool: Arc<Pool<ConnectionManager>> // does this need an arc?
@@ -30,7 +30,7 @@ impl DatabaseHospitalRepository {
     }
 
     pub async fn setup(&mut self) -> Result<ExecuteResult, RepositoryError> {
-        let content = read_to_string("./setup.sql")
+        let content = read_to_string("./admission/setup.sql")
             .map_err(|e| RepositoryError::other(&e.to_string()))?;
 
         let mut conn = self.pool.get()
@@ -49,8 +49,12 @@ impl DatabaseHospitalRepository {
 struct HospitalPatientMapping {
     hospital_id: i32,
     hospital_name: String,
-    patient_id: Option<i32>,
+    patient_id: Option<uuid::Uuid>,
     patient_name: Option<String>
+}
+
+fn uniqueidentifier_to_patient_uuid(uniqueidentifier: tiberius::Uuid) -> uuid::Uuid {
+    uuid::Uuid::from_bytes(uniqueidentifier.into_bytes())
 }
 
 #[async_trait]
@@ -97,7 +101,9 @@ impl HospitalRepository for DatabaseHospitalRepository {
             }
             if let (Some(id), Some(name)) = (row.patient_id, row.patient_name) {
                 let mut h = hm.get(&row.hospital_id).expect("Hospital with this ID exists by now").to_owned();
-                let p = Patient::new(&name).with_id(id.try_into().unwrap());
+                let p = Patient::new(&name)
+                    .with_id(uniqueidentifier_to_patient_uuid(id))
+                    .with_status(AdmissionStatus::Admitted(row.hospital_id.try_into().unwrap()));
                 h.add_patient(p);
                 hm.insert(row.hospital_id, h); // add the updated hospital back in
             }
@@ -149,7 +155,10 @@ impl HospitalRepository for DatabaseHospitalRepository {
         let mut h = Hospital::new(&rows[0].hospital_name).with_id(rows[0].hospital_id.try_into().unwrap());
         for row in rows {
             if let (Some(id), Some(name)) = (row.patient_id, row.patient_name) {
-                h.add_patient(Patient::new(&name).with_id(id.try_into().unwrap()));
+                h.add_patient(Patient::new(&name)
+                    .with_id(id)
+                    .with_status(AdmissionStatus::Admitted(row.hospital_id.try_into().unwrap()))
+                );
             }
         }
         
@@ -158,11 +167,11 @@ impl HospitalRepository for DatabaseHospitalRepository {
 
     async fn add_patient_to_hospital(&mut self, hospital_name: &str, patient: Patient) -> Result<Hospital, RepositoryError> {
         let q = "
-            INSERT INTO rust.Patients (Name, HospitalID)
-            VALUES (@P1, (
+            INSERT INTO rust.Patients (PatientID, Name, HospitalID)
+            VALUES (@P1, @P2, (
                 SELECT HospitalID
                   FROM rust.Hospitals
-                 WHERE UPPER(Name) = @P2
+                 WHERE UPPER(Name) = @P3
             ))
             ;
         ";
@@ -174,7 +183,7 @@ impl HospitalRepository for DatabaseHospitalRepository {
                 .await
                 .map_err(RepositoryError::other)?;
 
-            let _result = conn.execute(q, &[&patient.name(), &hospital_name.to_uppercase()])
+            let _result = conn.execute(q, &[&patient.id().unwrap(), &patient.name(), &hospital_name.to_uppercase()])
                 .await
                 .map_err(RepositoryError::tiberius)?;
         }
@@ -184,7 +193,7 @@ impl HospitalRepository for DatabaseHospitalRepository {
             .ok_or_else(|| RepositoryError::invalid_hospital_name(hospital_name))
     }
 
-    async fn remove_patient_from_hospital(&mut self, patient_id: u32, hospital_name: &str) -> Result<Hospital, RepositoryError> {
+    async fn remove_patient_from_hospital(&mut self, patient_id: uuid::Uuid, hospital_name: &str) -> Result<Hospital, RepositoryError> {
         let q = "
             DELETE FROM rust.Patients
              WHERE PatientID = @P1
@@ -201,7 +210,7 @@ impl HospitalRepository for DatabaseHospitalRepository {
                 .await
                 .map_err(RepositoryError::other)?;
 
-            let _result = conn.execute(q, &[&(patient_id as i32), &hospital_name.to_uppercase()])
+            let _result = conn.execute(q, &[&patient_id, &hospital_name.to_uppercase()])
                 .await
                 .map_err(RepositoryError::tiberius)?;
             // drops borrow of self here

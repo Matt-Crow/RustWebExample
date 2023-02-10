@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use bb8::Pool;
 use bb8_tiberius::ConnectionManager;
 use common::hospital::{Patient, AdmissionStatus};
+use futures_util::Future;
 use tiberius::ExecuteResult;
 
 use crate::patient_services::{PatientRepository, PatientError};
@@ -17,22 +18,45 @@ impl DatabasePatientRepository {
         }
     }
 
-    pub async fn setup(&mut self) -> Result<ExecuteResult, PatientError> {
-        let q = "
-            IF OBJECT_ID(N'rust.Waitlist', N'U') IS NOT NULL
-                DROP TABLE rust.Waitlist
-            
-            CREATE TABLE rust.Waitlist (
-                PatientID int IDENTITY(1, 1) PRIMARY KEY NOT NULL,
-                PatientName varchar(32) NOT NULL
-            );
+    pub async fn setup<F, Fut>(&mut self, setup_hospitals: F) -> Result<ExecuteResult, PatientError>
+    where
+        F: FnOnce() -> Fut,
+        Fut: Future<Output = ()> {
+        let q1 = "
+            IF OBJECT_ID(N'rust.Patients', N'U') IS NOT NULL
+	            DROP TABLE rust.Patients;
         ";
 
         let mut conn = self.pool.get()
             .await
             .map_err(PatientError::repository)?;
         
-        let result = conn.execute(q, &[])
+        conn.execute(q1, &[])
+            .await
+            .map_err(PatientError::repository)?;
+        
+        setup_hospitals().await;
+
+        let q2 = "
+            -- if HospitalID is null, patient is on the waitlist
+            CREATE TABLE rust.Patients (
+                PatientID uniqueidentifier PRIMARY KEY NOT NULL,
+                Name varchar(32) NOT NULL,
+                HospitalID int,
+                CONSTRAINT FK_Patients_Hospitals FOREIGN KEY (HospitalID)
+                    REFERENCES rust.Hospitals (HospitalID)
+                    ON DELETE CASCADE
+            );
+            
+            INSERT INTO rust.Patients (PatientID, Name, HospitalID)
+            VALUES
+                (NEWID(), 'John Doe', 1),
+                (NEWID(), 'Jane Doe', 1),
+                (NEWID(), 'Bob Smith', 2)
+            ;
+        ";
+
+        let result = conn.execute(q2, &[])
             .await
             .map_err(PatientError::repository)?;
 
@@ -40,44 +64,12 @@ impl DatabasePatientRepository {
     }
 
     async fn store_new_patient(&mut self, patient: &Patient) -> Result<Patient, PatientError> {
+        let store_me = patient
+            .with_random_id()
+            .with_status(AdmissionStatus::OnWaitlist);
+
         let q = "
-            INSERT INTO rust.Patients (Name)
-            VALUES (@P1);
-        ";
-
-        let mut conn = self.pool.get()
-            .await
-            .map_err(PatientError::repository)?;
-        
-        conn.execute(q, &[&patient.name()])
-            .await
-            .map_err(PatientError::repository)?;
-        
-        // todo set ID
-        Ok(patient.clone())
-    }
-
-    async fn store_waitlisted_patient(&mut self, patient: &Patient) -> Result<Patient, PatientError> {
-        let q = "
-            INSERT INTO rust.Patients (Name)
-            VALUES (@P1);
-        ";
-
-        let mut conn = self.pool.get()
-            .await
-            .map_err(PatientError::repository)?;
-        
-        conn.execute(q, &[&patient.name()])
-            .await
-            .map_err(PatientError::repository)?;
-        
-        // todo set ID
-        Ok(patient.clone())
-    }
-
-    async fn store_admitted_patient(&mut self, patient: &Patient, hospital_id: i32) -> Result<Patient, PatientError> {
-        let q = "
-            INSERT INTO rust.Patients (Name, HospitalID)
+            INSERT INTO rust.Patients (PatientID, Name)
             VALUES (@P1, @P2);
         ";
 
@@ -85,11 +77,46 @@ impl DatabasePatientRepository {
             .await
             .map_err(PatientError::repository)?;
         
-        conn.execute(q, &[&patient.name(), &hospital_id])
+        conn.execute(q, &[&store_me.id().unwrap(), &store_me.name()])
             .await
             .map_err(PatientError::repository)?;
         
-        // todo retrieve their ID
+        Ok(store_me)
+    }
+
+    async fn store_waitlisted_patient(&mut self, patient: &Patient) -> Result<Patient, PatientError> {
+        let store_me = patient.clone();
+
+        let q = "
+            INSERT INTO rust.Patients (PatientID, Name)
+            VALUES (@P1, @P2);
+        ";
+
+        let mut conn = self.pool.get()
+            .await
+            .map_err(PatientError::repository)?;
+        
+        conn.execute(q, &[&store_me.id().unwrap(), &store_me.name()])
+            .await
+            .map_err(PatientError::repository)?;
+        
+        Ok(store_me)
+    }
+
+    async fn store_admitted_patient(&mut self, patient: &Patient, hospital_id: i32) -> Result<Patient, PatientError> {
+        let q = "
+            INSERT INTO rust.Patients (PatientID, Name, HospitalID)
+            VALUES (@P1, @P2, @P3);
+        ";
+
+        let mut conn = self.pool.get()
+            .await
+            .map_err(PatientError::repository)?;
+        
+        conn.execute(q, &[&patient.id().unwrap(), &patient.name(), &hospital_id])
+            .await
+            .map_err(PatientError::repository)?;
+        
         Ok(patient.clone())
     }
 }

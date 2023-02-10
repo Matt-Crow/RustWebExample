@@ -21,6 +21,7 @@ futures-util = "0.3.25"
 async-trait = "0.1.61"
 openidconnect = { version = "2.5.0", features = ["accept-rfc3339-timestamps"] }
 actix-session = { version = "0.7.2", features = ["cookie-session"] }
+uuid = { version = "1.3.0", features = ["serde", "v4"] }
 
 # https://github.com/prisma/tiberius/issues/145#issuecomment-829044670
 [dependencies.tokio-util]
