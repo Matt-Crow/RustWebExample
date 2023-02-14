@@ -31,6 +31,10 @@ impl Hospital {
         }
     }
 
+    pub fn id(&self) -> Option<u32> {
+        self.id.to_owned()
+    }
+
     pub fn add_patient(&mut self, patient: Patient) {
         self.patients.push(patient);
     }

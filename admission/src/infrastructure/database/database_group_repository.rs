@@ -1,9 +1,10 @@
 use async_trait::async_trait;
 use bb8::Pool;
 use bb8_tiberius::ConnectionManager;
-use futures_util::{TryStreamExt, StreamExt};
 
 use crate::core::users::{GroupRepository, UserError};
+
+use super::helpers;
 
 pub struct DatabaseGroupRepository {
     pool: Pool<ConnectionManager> // pool internally uses an Arc
@@ -82,22 +83,12 @@ impl GroupRepository for DatabaseGroupRepository {
             .await
             .map_err(UserError::Tiberius)?;
         
-        let records = result
-            .into_row_stream()
-            .into_stream()
-            .filter_map(|maybe_record| async {
-                match maybe_record {
-                    Ok(record) => Some(record),
-                    Err(_) => None
-                }
-            })
-            .map(|row| {
-                row.get::<&str, usize>(0)
-                    .map(String::from)
-                    .expect("should contain at least 1 column")
-            })
-            .collect::<Vec<String>>()
-            .await;
+        let records = helpers::map(
+            result,
+            |row| row.get::<&str, usize>(0)
+                .map(String::from)
+                .expect("should contain at least 1 column")
+        ).await;
         
         Ok(records)
     }

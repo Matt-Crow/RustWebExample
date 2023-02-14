@@ -4,11 +4,12 @@ use async_trait::async_trait;
 use bb8::Pool;
 use bb8_tiberius::ConnectionManager;
 use common::hospital::{Patient, AdmissionStatus};
-use futures_util::{Future, TryStreamExt, StreamExt};
+use futures_util::Future;
 use tiberius::ExecuteResult;
-use std::collections::hash_map::Entry::*;
 
 use crate::patient_services::{PatientRepository, PatientError};
+
+use super::helpers;
 
 pub struct DatabasePatientRepository {
     pool: Pool<ConnectionManager> // internally uses an Arc
@@ -207,43 +208,31 @@ impl PatientRepository for DatabasePatientRepository {
         let result = conn.query(q, &[])
             .await
             .map_err(PatientError::repository)?;
-        let rows: Vec<PatientDisallowedHospitalMapping> = result
-            .into_row_stream()
-            .into_stream()
-            .filter_map(|row| async {
-                match row {
-                    Ok(record) => Some(record),
-                    Err(_) => None
-            }})
-            .map(|row| PatientDisallowedHospitalMapping {
+        let rows: Vec<PatientDisallowedHospitalMapping> = helpers::map(
+            result,
+            |row| PatientDisallowedHospitalMapping {
                 patient_id: row.get("Patient ID").expect("Patient ID cannot be null"),
                 patient_name: row.get::<&str, &str>("Patient Name").map(String::from).expect("Patient name cannot be null"),
                 hospital_id: row.get("Hospital ID"),
                 disallowed: row.get::<&str, &str>("Disallowed Hospital Name").map(String::from)
             })
-            .collect()
             .await;
         
         let mut hm: HashMap<uuid::Uuid, Patient> = HashMap::new();
         for row in rows {
-            let e = hm.entry(row.patient_id);
-            let mut p = match e {
-                Occupied(p) => p.get().to_owned(),
-                Vacant(_) => {
+            let e = hm.entry(row.patient_id)
+                .or_insert({
                     let np = Patient::new(&row.patient_name)
                         .with_id(row.patient_id);
                     match row.hospital_id {
                         Some(hospital_id) => np.with_status(AdmissionStatus::Admitted(hospital_id.try_into().unwrap())),
                         None => np.with_status(AdmissionStatus::OnWaitlist)
                     }
-                }
-            };
+                });
 
             if let Some(hospital_name) = row.disallowed {
-                p.add_disallowed_hospital(&hospital_name);
+                e.add_disallowed_hospital(&hospital_name);
             }
-
-            hm.insert(p.id().expect("Id should be set by now"), p);
         }
 
         Ok(hm.values().map(|p| p.to_owned()).collect())
@@ -271,21 +260,15 @@ impl PatientRepository for DatabasePatientRepository {
         let result = conn.query(q, &[&id])
             .await
             .map_err(PatientError::repository)?;
-        let rows: Vec<PatientDisallowedHospitalMapping> = result
-            .into_row_stream()
-            .into_stream()
-            .filter_map(|row| async {
-                match row {
-                    Ok(record) => Some(record),
-                    Err(_) => None
-            }})
-            .map(|row| PatientDisallowedHospitalMapping {
+
+        let rows: Vec<PatientDisallowedHospitalMapping> = helpers::map(
+            result,
+            |row| PatientDisallowedHospitalMapping {
                 patient_id: id,
                 patient_name: row.get::<&str, &str>("Patient Name").map(String::from).expect("Patient name cannot be null"),
                 hospital_id: row.get("Hospital ID"),
                 disallowed: row.get::<&str, &str>("Disallowed Hospital Name").map(String::from)
             })
-            .collect()
             .await;
         
         if rows.is_empty() {

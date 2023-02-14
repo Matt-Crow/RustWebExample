@@ -4,18 +4,17 @@
 // Rust ecosystem does not currently have an ORM for MSSQL, so we have to
 // manually construct the SQL queries ourselves.
 
-use std::{fs::read_to_string, collections::{HashMap, hash_map::Entry::Vacant}, sync::Arc};
+use std::{fs::read_to_string, collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
 use bb8::Pool;
 use bb8_tiberius::ConnectionManager;
-use futures_util::{StreamExt, future, TryStreamExt};
 use tiberius::ExecuteResult;
 
 use crate::{core::hospital_services::{HospitalRepository, RepositoryError}, patient_services::PatientRepository};
 use common::hospital::{Hospital, Patient, AdmissionStatus};
 
-use super::database_patient_repository::DatabasePatientRepository;
+use super::{database_patient_repository::DatabasePatientRepository, helpers};
 
 pub struct DatabaseHospitalRepository {
     pool: Arc<Pool<ConnectionManager>>, // does this need an arc?
@@ -77,35 +76,27 @@ impl HospitalRepository for DatabaseHospitalRepository {
             .map_err(RepositoryError::tiberius)?;
         
         // map relational to HospitalPatientMapping
-        let rows = query_result
-            .into_row_stream()
-            .into_stream()
-            .filter_map(|ok_or_not| future::ready(match ok_or_not {
-                Ok(row) => Some(row),
-                Err(_) => None
-            })) // remove not-OK items
-            .map(|row| HospitalPatientMapping {
+        let rows = helpers::map(
+            query_result,
+            |row| HospitalPatientMapping {
                 hospital_id: row.get(0).expect("hospital ID should be non-null"),
                 hospital_name: row.get::<&str, usize>(1).map(String::from).expect("hospital name should be non-null"),
                 patient_id: row.get(2)
             })
-            .collect::<Vec<HospitalPatientMapping>>()
             .await;
 
         let mut hm: HashMap<i32, Hospital> = HashMap::new();
         for row in rows {
-            if let Vacant(entry) = hm.entry(row.hospital_id) {
-                entry.insert(Hospital::new(&row.hospital_name).with_id(row.hospital_id.try_into().unwrap()));
-            }
+            let e = hm.entry(row.hospital_id)
+                .or_insert(Hospital::new(&row.hospital_name).with_id(row.hospital_id.try_into().unwrap()));
+            
             if let Some(id) = row.patient_id {
-                let mut h = hm.get(&row.hospital_id).expect("Hospital with this ID exists by now").to_owned();
                 let p = self.patients.get_patient_by_id(id)
                     .await
                     .map_err(RepositoryError::other)?
                     .expect("patient should exist for this ID")
                     .with_status(AdmissionStatus::Admitted(row.hospital_id.try_into().unwrap()));
-                h.add_patient(p);
-                hm.insert(row.hospital_id, h); // add the updated hospital back in
+                e.add_patient(p);
             }
         }
 
@@ -131,19 +122,13 @@ impl HospitalRepository for DatabaseHospitalRepository {
             .await
             .map_err(RepositoryError::tiberius)?;
         
-        let rows = query_result
-            .into_row_stream()
-            .into_stream()
-            .filter_map(|ok_or_not| future::ready(match ok_or_not {
-                Ok(row) => Some(row),
-                Err(_) => None
-            })) // remove not-OK items
-            .map(|row| HospitalPatientMapping {
+        let rows = helpers::map(
+            query_result,
+            |row| HospitalPatientMapping {
                 hospital_id: row.get(0).expect("hospital ID should be non-null"),
                 hospital_name: row.get::<&str, usize>(1).map(String::from).expect("hospital name should be non-null"),
                 patient_id: row.get(2)
             })
-            .collect::<Vec<HospitalPatientMapping>>()
             .await;
         
         if rows.is_empty() {
@@ -152,15 +137,13 @@ impl HospitalRepository for DatabaseHospitalRepository {
         }
 
         let mut h = Hospital::new(&rows[0].hospital_name).with_id(rows[0].hospital_id.try_into().unwrap());
-        for row in rows {
-            if let Some(id) = row.patient_id {
-                let p = self.patients.get_patient_by_id(id)
-                    .await
-                    .map_err(RepositoryError::other)?
-                    .expect("patient should exist for this ID")
-                    .with_status(AdmissionStatus::Admitted(row.hospital_id.try_into().unwrap()));
-                h.add_patient(p);
-            }
+        for id in rows.iter().filter_map(|row| row.patient_id) {
+            let p = self.patients.get_patient_by_id(id)
+                .await
+                .map_err(RepositoryError::other)?
+                .expect("patient should exist for this ID")
+                .with_status(AdmissionStatus::Admitted(h.id().unwrap()));
+            h.add_patient(p);
         }
         
         Ok(Some(h))
