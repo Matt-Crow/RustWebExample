@@ -1,5 +1,7 @@
 // routes connect HTTP verbs & URLs to backend services
 
+use std::collections::HashSet;
+
 use actix_web::{web::{ServiceConfig, resource, get, Json, self, post, delete}, error::{ErrorInternalServerError, ErrorNotFound, ErrorBadRequest}, Responder, HttpResponse};
 use serde::Deserialize;
 use tokio::sync::Mutex;
@@ -23,6 +25,11 @@ pub fn configure_hospital_routes(cfg: &mut ServiceConfig) {
         resource("/hospitals/{name}/{patient_id}")
             .name("hospital_patients")
             .route(delete().to(unadmit_patient))
+    );
+    cfg.service(
+        resource("/patients")
+            .name("patients")
+            .route(get().to(patients_get_handler))
     );
     cfg.service(
         resource("/waitlist")
@@ -64,18 +71,23 @@ async fn get_hospital_by_name(
 
 #[derive(Debug, Deserialize)]
 struct NewPatient {
-    name: String
+    name: String,
+    disallow_admission_to: Option<HashSet<String>>
 }
 
 async fn admit_patient(
     hospitals: web::Data<Mutex<HospitalService>>,
     hospital_name: web::Path<String>,
-    patient: Json<NewPatient>
+    posted: Json<NewPatient>
 ) -> actix_web::Result<Json<Hospital>> {
     let mut updater = hospitals.lock().await;
 
-    let patient = Patient::new(&patient.name)
+    let mut patient = Patient::new(&posted.name)
         .with_random_id();
+    if let Some(ref disallowed_hospitals) = posted.disallow_admission_to {
+        patient = patient.with_disallowed_hospitals(disallowed_hospitals);
+    }
+    println!("Patient: {:#?}", patient);
 
     match updater.admit_patient_to_hospital(patient, &hospital_name).await {
         Ok(hospital) => Ok(Json(hospital)),
@@ -97,14 +109,31 @@ async fn unadmit_patient(
     }
 }
 
-async fn waitlist_post_handler(
-    patients: web::Data<Mutex<PatientService>>,
-    patient: Json<NewPatient>
+async fn patients_get_handler(
+    patients: web::Data<Mutex<PatientService>>
 ) -> impl Responder {
     let mut service = patients.lock().await;
 
-    let patient = Patient::new(&patient.name)
+    service.get_all_patients()
+        .await
+        .map(|ps| HttpResponse::Ok().json(ps))
+        .map_err(ErrorInternalServerError)
+}
+
+/// handles POST requests to add a new patient to the waitlist
+async fn waitlist_post_handler(
+    patients: web::Data<Mutex<PatientService>>,
+    posted: Json<NewPatient>
+) -> impl Responder {
+    let mut service = patients.lock().await;
+
+    let mut patient = Patient::new(&posted.name)
         .with_status(AdmissionStatus::New);
+
+    if let Some(ref disallowed_hospitals) = posted.disallow_admission_to {
+        patient = patient.with_disallowed_hospitals(disallowed_hospitals);
+    }
+    println!("Patient: {:#?}", patient);
 
     match service.add_patient_to_waitlist(&patient).await {
         Ok(stored) => Ok(HttpResponse::Created().json(stored)),

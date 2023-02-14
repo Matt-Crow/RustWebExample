@@ -39,7 +39,6 @@ async fn main() -> std::io::Result<()> {
                 hospital_repo.setup()
                     .await
                     .expect("Should be able to setup hospital repository");
-                ()
             })
             .await
             .expect("Should be able to setup patient repository");

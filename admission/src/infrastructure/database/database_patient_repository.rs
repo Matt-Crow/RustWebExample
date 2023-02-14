@@ -1,9 +1,12 @@
+use std::collections::{HashSet, HashMap};
+
 use async_trait::async_trait;
 use bb8::Pool;
 use bb8_tiberius::ConnectionManager;
 use common::hospital::{Patient, AdmissionStatus};
-use futures_util::Future;
+use futures_util::{Future, TryStreamExt, StreamExt};
 use tiberius::ExecuteResult;
+use std::collections::hash_map::Entry::*;
 
 use crate::patient_services::{PatientRepository, PatientError};
 
@@ -23,6 +26,9 @@ impl DatabasePatientRepository {
         F: FnOnce() -> Fut,
         Fut: Future<Output = ()> {
         let q1 = "
+            IF OBJECT_ID(N'rust.Patient_disallowed_hospitals', N'U') IS NOT NULL
+                DROP TABLE rust.Patient_disallowed_hospitals;
+            
             IF OBJECT_ID(N'rust.Patients', N'U') IS NOT NULL
 	            DROP TABLE rust.Patients;
         ";
@@ -46,6 +52,21 @@ impl DatabasePatientRepository {
                 CONSTRAINT FK_Patients_Hospitals FOREIGN KEY (HospitalID)
                     REFERENCES rust.Hospitals (HospitalID)
                     ON DELETE CASCADE
+            );
+
+            CREATE TABLE rust.Patient_disallowed_hospitals (
+                PatientID uniqueidentifier NOT NULL,
+                HospitalID int,
+
+                CONSTRAINT UQ_Patient_disallowed_hospitals_PatientID_HospitalID UNIQUE (PatientID, HospitalID),
+
+                CONSTRAINT FK_Patient_disallowed_hospitals_Patients FOREIGN KEY (PatientID)
+                    REFERENCES rust.Patients (PatientID)
+                    ON DELETE CASCADE,
+                
+                CONSTRAINT FK_Patient_disallowed_hospitals_Hospitals FOREIGN KEY (HospitalID)
+                    REFERENCES rust.Hospitals (HospitalID)
+                    --ON DELETE CASCADE
             );
             
             INSERT INTO rust.Patients (PatientID, Name, HospitalID)
@@ -80,6 +101,19 @@ impl DatabasePatientRepository {
         conn.execute(q, &[&store_me.id().unwrap(), &store_me.name()])
             .await
             .map_err(PatientError::repository)?;
+
+        for disallowed_hospital in store_me.disallowed_hospitals() {
+            conn.execute("
+                INSERT INTO rust.Patient_disallowed_hospitals (PatientID, HospitalID)
+                VALUES (@P1, (
+                    SELECT HospitalID
+                      FROM rust.Hospitals
+                     WHERE Name = @P2
+                ));
+            ", &[&store_me.id().unwrap(), &disallowed_hospital])
+                .await
+                .map_err(PatientError::repository)?;
+        }
         
         Ok(store_me)
     }
@@ -99,6 +133,19 @@ impl DatabasePatientRepository {
         conn.execute(q, &[&store_me.id().unwrap(), &store_me.name()])
             .await
             .map_err(PatientError::repository)?;
+
+        for disallowed_hospital in store_me.disallowed_hospitals() {
+            conn.execute("
+                INSERT INTO rust.Patient_disallowed_hospitals (PatientID, HospitalID)
+                VALUES (@P1, (
+                    SELECT HospitalID
+                      FROM rust.Hospitals
+                     WHERE Name = @P2
+                ));
+            ", &[&store_me.id().unwrap(), &disallowed_hospital])
+                .await
+                .map_err(PatientError::repository)?;
+        }
         
         Ok(store_me)
     }
@@ -121,6 +168,13 @@ impl DatabasePatientRepository {
     }
 }
 
+struct PatientDisallowedHospitalMapping {
+    patient_id: uuid::Uuid,
+    patient_name: String,
+    hospital_id: Option<i32>,
+    disallowed: Option<String>
+}
+
 #[async_trait]
 impl PatientRepository for DatabasePatientRepository {
     async fn store_patient(&mut self, patient: &Patient) -> Result<Patient, PatientError> {
@@ -128,6 +182,128 @@ impl PatientRepository for DatabasePatientRepository {
             AdmissionStatus::New => self.store_new_patient(patient).await,
             AdmissionStatus::OnWaitlist => self.store_waitlisted_patient(patient).await,
             AdmissionStatus::Admitted(hospital_id) => self.store_admitted_patient(patient, hospital_id.try_into().unwrap()).await
+        }
+    }
+
+    async fn get_all_patients(&mut self) -> Result<Vec<Patient>, PatientError> {
+        let q = "
+            SELECT p.PatientID 'Patient ID', p.Name 'Patient Name', p.HospitalID 'Hospital ID', d.Name 'Disallowed Hospital Name'
+              FROM rust.Patients AS p
+                   LEFT JOIN
+                   (
+                       rust.Patient_disallowed_hospitals AS pdh
+                       JOIN
+                       rust.Hospitals AS d
+                       ON pdh.HospitalID = d.HospitalID
+                   )
+                   ON p.PatientID = pdh.PatientID
+            ;
+        ";
+
+        let mut conn = self.pool.get()
+            .await
+            .map_err(PatientError::repository)?;
+
+        let result = conn.query(q, &[])
+            .await
+            .map_err(PatientError::repository)?;
+        let rows: Vec<PatientDisallowedHospitalMapping> = result
+            .into_row_stream()
+            .into_stream()
+            .filter_map(|row| async {
+                match row {
+                    Ok(record) => Some(record),
+                    Err(_) => None
+            }})
+            .map(|row| PatientDisallowedHospitalMapping {
+                patient_id: row.get("Patient ID").expect("Patient ID cannot be null"),
+                patient_name: row.get::<&str, &str>("Patient Name").map(String::from).expect("Patient name cannot be null"),
+                hospital_id: row.get("Hospital ID"),
+                disallowed: row.get::<&str, &str>("Disallowed Hospital Name").map(String::from)
+            })
+            .collect()
+            .await;
+        
+        let mut hm: HashMap<uuid::Uuid, Patient> = HashMap::new();
+        for row in rows {
+            let e = hm.entry(row.patient_id);
+            let mut p = match e {
+                Occupied(p) => p.get().to_owned(),
+                Vacant(_) => {
+                    let np = Patient::new(&row.patient_name)
+                        .with_id(row.patient_id);
+                    match row.hospital_id {
+                        Some(hospital_id) => np.with_status(AdmissionStatus::Admitted(hospital_id.try_into().unwrap())),
+                        None => np.with_status(AdmissionStatus::OnWaitlist)
+                    }
+                }
+            };
+
+            if let Some(hospital_name) = row.disallowed {
+                p.add_disallowed_hospital(&hospital_name);
+            }
+
+            hm.insert(p.id().expect("Id should be set by now"), p);
+        }
+
+        Ok(hm.values().map(|p| p.to_owned()).collect())
+    }
+
+    async fn get_patient_by_id(&mut self, id: uuid::Uuid) -> Result<Option<Patient>, PatientError> {
+        let q = "
+            SELECT p.Name 'Patient Name', p.HospitalID 'Hospital ID', d.Name 'Disallowed Hospital Name'
+              FROM rust.Patients AS p
+                   LEFT JOIN
+                   (
+                       rust.Patient_disallowed_hospitals AS pdh
+                       JOIN
+                       rust.Hospitals AS d
+                       ON pdh.HospitalID = d.HospitalID
+                   )
+                   ON p.PatientID = pdh.PatientID
+             WHERE p.PatientID = @P1;
+        ";
+
+        let mut conn = self.pool.get()
+            .await
+            .map_err(PatientError::repository)?;
+
+        let result = conn.query(q, &[&id])
+            .await
+            .map_err(PatientError::repository)?;
+        let rows: Vec<PatientDisallowedHospitalMapping> = result
+            .into_row_stream()
+            .into_stream()
+            .filter_map(|row| async {
+                match row {
+                    Ok(record) => Some(record),
+                    Err(_) => None
+            }})
+            .map(|row| PatientDisallowedHospitalMapping {
+                patient_id: id,
+                patient_name: row.get::<&str, &str>("Patient Name").map(String::from).expect("Patient name cannot be null"),
+                hospital_id: row.get("Hospital ID"),
+                disallowed: row.get::<&str, &str>("Disallowed Hospital Name").map(String::from)
+            })
+            .collect()
+            .await;
+        
+        if rows.is_empty() {
+            Ok(None)
+        } else {
+            let mut p = Patient::new(&rows[0].patient_name)
+                .with_id(id);
+            match rows[0].hospital_id {
+                Some(hospital_id) => p = p.with_status(AdmissionStatus::Admitted(hospital_id.try_into().unwrap())),
+                None => p = p.with_status(AdmissionStatus::OnWaitlist)
+            };
+
+            let disallowed_hospitals: HashSet<String> = rows.iter()
+                .filter_map(|mapping| mapping.disallowed.as_ref().map(|h| h.to_owned()))
+                .collect();
+            p = p.with_disallowed_hospitals(&disallowed_hospitals);
+
+            Ok(Some(p))
         }
     }
 }

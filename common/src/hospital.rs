@@ -1,7 +1,7 @@
 // model structs are how the program represents the problem domain
 
 use async_trait::async_trait;
-use std::fmt::{Debug, Display};
+use std::{fmt::{Debug, Display}, collections::HashSet};
 // the serde (SERialize DEserialize) crate helps convert data to & from JSON
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
@@ -64,6 +64,7 @@ impl PartialEq for Hospital {
 pub struct Patient {
     id: Option<Uuid>,
     name: String,
+    disallow_admission_to: HashSet<String>,
     status: AdmissionStatus
 }
 
@@ -78,6 +79,7 @@ impl Patient {
         Self {
             id: None,
             name: name.to_owned(),
+            disallow_admission_to: HashSet::new(),
             status: AdmissionStatus::New
         }
     }
@@ -86,6 +88,7 @@ impl Patient {
         Self {
             id: Some(id),
             name: self.name.to_owned(),
+            disallow_admission_to: self.disallow_admission_to.to_owned(),
             status: self.status.clone()
         }
     }
@@ -94,12 +97,29 @@ impl Patient {
         self.with_id(Uuid::new_v4())
     }
 
+    pub fn with_disallowed_hospitals(
+        &self, 
+        disallowed_hospitals: &HashSet<String>
+    ) -> Self {
+        Self {
+            id: self.id.to_owned(),
+            name: self.name.to_owned(),
+            disallow_admission_to: disallowed_hospitals.to_owned(),
+            status: self.status.to_owned()
+        }
+    }
+
     pub fn with_status(&self, status: AdmissionStatus) -> Self {
         Self {
             id: self.id.to_owned(),
             name: self.name.to_owned(),
+            disallow_admission_to: self.disallow_admission_to.to_owned(),
             status
         }
+    }
+
+    pub fn add_disallowed_hospital(&mut self, hospital: &str) {
+        self.disallow_admission_to.insert(String::from(hospital));
     }
 
     pub fn name(&self) -> String {
@@ -108,6 +128,10 @@ impl Patient {
 
     pub fn id(&self) -> Option<Uuid> {
         self.id.to_owned()
+    }
+
+    pub fn disallowed_hospitals(&self) -> HashSet<String> {
+        self.disallow_admission_to.to_owned()
     }
 
     pub fn status(&self) -> AdmissionStatus {
@@ -120,6 +144,7 @@ impl Clone for Patient {
         Self {
             id: self.id,
             name: self.name.to_string(),
+            disallow_admission_to: self.disallow_admission_to.to_owned(),
             status: self.status.clone()
         }
     }

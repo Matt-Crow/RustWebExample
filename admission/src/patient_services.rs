@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{error::Error, fmt::Display};
 
 use async_trait::async_trait;
 use common::hospital::Patient;
@@ -16,6 +16,10 @@ impl PatientService {
         }
     }
 
+    pub async fn get_all_patients(&mut self) -> Result<Vec<Patient>, PatientError> {
+        self.patient_repository.get_all_patients().await
+    }
+
     /// Adds the given patient to the hospital admission waitlist, if they have
     /// not yet been added to the waitlist and have not yet been admitted to a
     /// hospital. Returns an error if the patient is not added to the waitlist.
@@ -31,6 +35,8 @@ impl PatientService {
 #[async_trait]
 pub trait PatientRepository: Send + Sync {
     async fn store_patient(&mut self, patient: &Patient) -> Result<Patient, PatientError>;
+    async fn get_all_patients(&mut self) -> Result<Vec<Patient>, PatientError>;
+    async fn get_patient_by_id(&mut self, id: Uuid) -> Result<Option<Patient>, PatientError>;
 }
 
 #[derive(Debug)]
@@ -42,6 +48,15 @@ pub enum PatientError {
 impl PatientError {
     pub fn repository(inner: impl Error + 'static) -> Self {
         Self::Repository(Box::new(inner))
+    }
+}
+
+impl Display for PatientError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::AlreadyExists(id) => write!(f, "Duplicate patient ID: {}", id),
+            Self::Repository(inner) => write!(f, "Repository error: {}", inner)
+        }
     }
 }
 
@@ -60,6 +75,8 @@ mod tests {
         #[async_trait]
         impl PatientRepository for Patients {
             async fn store_patient(&mut self, patient: &Patient) -> Result<Patient, PatientError>;
+            async fn get_all_patients(&mut self) -> Result<Vec<Patient>, PatientError>;
+            async fn get_patient_by_id(&mut self, id: Uuid) -> Result<Option<Patient>, PatientError>;
         }
     }
 

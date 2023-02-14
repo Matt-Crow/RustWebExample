@@ -12,11 +12,14 @@ use bb8_tiberius::ConnectionManager;
 use futures_util::{StreamExt, future, TryStreamExt};
 use tiberius::ExecuteResult;
 
-use crate::core::hospital_services::{HospitalRepository, RepositoryError};
+use crate::{core::hospital_services::{HospitalRepository, RepositoryError}, patient_services::PatientRepository};
 use common::hospital::{Hospital, Patient, AdmissionStatus};
 
+use super::database_patient_repository::DatabasePatientRepository;
+
 pub struct DatabaseHospitalRepository {
-    pool: Arc<Pool<ConnectionManager>> // does this need an arc?
+    pool: Arc<Pool<ConnectionManager>>, // does this need an arc?
+    patients: DatabasePatientRepository
 }
 
 impl DatabaseHospitalRepository {
@@ -25,7 +28,8 @@ impl DatabaseHospitalRepository {
         pool: Pool<ConnectionManager>
     ) -> Self {
         Self {
-            pool: Arc::new(pool)
+            pool: Arc::new(pool.clone()),
+            patients: DatabasePatientRepository::new(pool)
         }
     }
 
@@ -49,23 +53,18 @@ impl DatabaseHospitalRepository {
 struct HospitalPatientMapping {
     hospital_id: i32,
     hospital_name: String,
-    patient_id: Option<uuid::Uuid>,
-    patient_name: Option<String>
-}
-
-fn uniqueidentifier_to_patient_uuid(uniqueidentifier: tiberius::Uuid) -> uuid::Uuid {
-    uuid::Uuid::from_bytes(uniqueidentifier.into_bytes())
+    patient_id: Option<uuid::Uuid>
 }
 
 #[async_trait]
 impl HospitalRepository for DatabaseHospitalRepository {
     async fn get_all_hospitals(&mut self) -> Result<Vec<Hospital>, RepositoryError> {
         let q = "
-            SELECT h.HospitalID 'Hospital ID', h.Name 'Hospital Name', p.PatientID 'Patient ID', p.Name 'Patient Name'
+            SELECT h.HospitalID 'Hospital ID', h.Name 'Hospital Name', p.PatientID 'Patient ID'
             FROM rust.Hospitals as h
-                LEFT JOIN                   --include hospitals with no patients
-                rust.Patients as p
-                ON h.HospitalID = p.HospitalID
+                 LEFT JOIN -- include hospitals with no patients
+                 rust.Patients as p
+                 ON h.HospitalID = p.HospitalID
             ;
         ";
 
@@ -88,8 +87,7 @@ impl HospitalRepository for DatabaseHospitalRepository {
             .map(|row| HospitalPatientMapping {
                 hospital_id: row.get(0).expect("hospital ID should be non-null"),
                 hospital_name: row.get::<&str, usize>(1).map(String::from).expect("hospital name should be non-null"),
-                patient_id: row.get(2),
-                patient_name: row.get::<&str, usize>(3).map(String::from)
+                patient_id: row.get(2)
             })
             .collect::<Vec<HospitalPatientMapping>>()
             .await;
@@ -99,10 +97,12 @@ impl HospitalRepository for DatabaseHospitalRepository {
             if let Vacant(entry) = hm.entry(row.hospital_id) {
                 entry.insert(Hospital::new(&row.hospital_name).with_id(row.hospital_id.try_into().unwrap()));
             }
-            if let (Some(id), Some(name)) = (row.patient_id, row.patient_name) {
+            if let Some(id) = row.patient_id {
                 let mut h = hm.get(&row.hospital_id).expect("Hospital with this ID exists by now").to_owned();
-                let p = Patient::new(&name)
-                    .with_id(uniqueidentifier_to_patient_uuid(id))
+                let p = self.patients.get_patient_by_id(id)
+                    .await
+                    .map_err(RepositoryError::other)?
+                    .expect("patient should exist for this ID")
                     .with_status(AdmissionStatus::Admitted(row.hospital_id.try_into().unwrap()));
                 h.add_patient(p);
                 hm.insert(row.hospital_id, h); // add the updated hospital back in
@@ -114,11 +114,11 @@ impl HospitalRepository for DatabaseHospitalRepository {
 
     async fn get_hospital(&mut self, name: &str) -> Result<Option<Hospital>, RepositoryError> {
         let q = "
-            SELECT h.HospitalID 'Hospital ID', h.Name 'Hospital Name', p.PatientID 'Patient ID', p.Name 'Patient Name'
-              FROM rust.Hospitals as h
-                   LEFT JOIN                   --include hospitals with no patients
-                   rust.Patients as p
-                   ON h.HospitalID = p.HospitalID
+            SELECT h.HospitalID 'Hospital ID', h.Name 'Hospital Name', p.PatientID 'Patient ID'
+            FROM rust.Hospitals as h
+                 LEFT JOIN -- include hospitals with no patients
+                 rust.Patients as p
+                 ON h.HospitalID = p.HospitalID
              WHERE UPPER(h.Name) = @P1
             ;
         ";
@@ -141,8 +141,7 @@ impl HospitalRepository for DatabaseHospitalRepository {
             .map(|row| HospitalPatientMapping {
                 hospital_id: row.get(0).expect("hospital ID should be non-null"),
                 hospital_name: row.get::<&str, usize>(1).map(String::from).expect("hospital name should be non-null"),
-                patient_id: row.get(2),
-                patient_name: row.get::<&str, usize>(3).map(String::from)
+                patient_id: row.get(2)
             })
             .collect::<Vec<HospitalPatientMapping>>()
             .await;
@@ -154,11 +153,13 @@ impl HospitalRepository for DatabaseHospitalRepository {
 
         let mut h = Hospital::new(&rows[0].hospital_name).with_id(rows[0].hospital_id.try_into().unwrap());
         for row in rows {
-            if let (Some(id), Some(name)) = (row.patient_id, row.patient_name) {
-                h.add_patient(Patient::new(&name)
-                    .with_id(id)
-                    .with_status(AdmissionStatus::Admitted(row.hospital_id.try_into().unwrap()))
-                );
+            if let Some(id) = row.patient_id {
+                let p = self.patients.get_patient_by_id(id)
+                    .await
+                    .map_err(RepositoryError::other)?
+                    .expect("patient should exist for this ID")
+                    .with_status(AdmissionStatus::Admitted(row.hospital_id.try_into().unwrap()));
+                h.add_patient(p);
             }
         }
         
