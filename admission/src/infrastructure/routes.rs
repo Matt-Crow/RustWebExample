@@ -11,6 +11,11 @@ use common::hospital::{Hospital, Patient, AdmissionStatus};
 
 pub fn configure_hospital_routes(cfg: &mut ServiceConfig) {
     cfg.service(
+        resource("/hospital-names")
+            .name("hospital names")
+            .route(get().to(get_hospital_names_handler))
+    );
+    cfg.service(
         resource("/hospitals")
             .name("hospitals")
             .route(get().to(get_all_hospitals))
@@ -36,6 +41,17 @@ pub fn configure_hospital_routes(cfg: &mut ServiceConfig) {
             .name("waitlist")
             .route(post().to(waitlist_post_handler))  
     );
+}
+
+async fn get_hospital_names_handler(
+    hospitals: web::Data<Mutex<HospitalService>>
+) -> actix_web::Result<Json<Vec<String>>> {
+    let mut getter = hospitals.lock().await;
+
+    getter.get_all_hospitals()
+        .await
+        .map(|hospitals| Json(hospitals.iter().map(|h| h.name()).collect()))
+        .map_err(ErrorInternalServerError)
 }
 
 async fn get_all_hospitals(

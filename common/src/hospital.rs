@@ -181,6 +181,7 @@ impl Display for AdmissionStatus {
     }
 }
 
+#[derive(Debug)]
 pub enum Error {
     ExternalServiceError(String)
 }
@@ -191,10 +192,10 @@ impl Error {
     }
 }
 
-impl ToString for Error {
-    fn to_string(&self) -> String {
+impl Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::ExternalServiceError(msg) => msg.to_owned()
+            Self::ExternalServiceError(msg) => write!(f, "{}", msg)
         }
     }
 }
@@ -203,4 +204,9 @@ impl ToString for Error {
 #[async_trait]
 pub trait HospitalDataProvider: Send + Sync {
     async fn get_all_hospitals(&self) -> Result<Vec<Hospital>, Error>;
+}
+
+#[async_trait]
+pub trait HospitalNameProvider: Send + Sync {
+    async fn get_all_hospital_names(&self) -> Result<Vec<String>, Error>;
 }
