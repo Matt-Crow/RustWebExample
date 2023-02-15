@@ -1,9 +1,8 @@
-use common::user::User;
+use common::{user::User, http_client::HttpClient};
 
-use crate::{census::CensusService, api_consumer::ExternalHospitalDataProvider, http_client::HttpClient};
+use crate::{census::CensusService, api_consumer::ExternalHospitalDataProvider};
 
 mod api_consumer;
-mod http_client;
 mod census;
 
 #[tokio::main]

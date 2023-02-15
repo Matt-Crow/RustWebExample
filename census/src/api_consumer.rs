@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use common::hospital::{HospitalDataProvider, Hospital, Error};
 
-use crate::http_client::HttpClient;
+use common::http_client::HttpClient;
 
 /// interacts with an external service to get hospital data
 pub struct ExternalHospitalDataProvider {

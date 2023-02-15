@@ -88,7 +88,7 @@ impl HospitalRepository for DatabaseHospitalRepository {
         let mut hm: HashMap<i32, Hospital> = HashMap::new();
         for row in rows {
             let e = hm.entry(row.hospital_id)
-                .or_insert(Hospital::new(&row.hospital_name).with_id(row.hospital_id.try_into().unwrap()));
+                .or_insert_with(|| Hospital::new(&row.hospital_name).with_id(row.hospital_id.try_into().unwrap()));
             
             if let Some(id) = row.patient_id {
                 let p = self.patients.get_patient_by_id(id)

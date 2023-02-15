@@ -7,7 +7,7 @@ use serde::Deserialize;
 use tokio::sync::Mutex;
 
 use crate::{core::hospital_services::HospitalService, patient_services::{PatientService, PatientError}};
-use common::hospital::{Hospital, Patient, AdmissionStatus};
+use common::{hospital::{Hospital, Patient, AdmissionStatus}, hospital_names::HospitalNames};
 
 pub fn configure_hospital_routes(cfg: &mut ServiceConfig) {
     cfg.service(
@@ -43,14 +43,21 @@ pub fn configure_hospital_routes(cfg: &mut ServiceConfig) {
     );
 }
 
+/// handles requests to GET /hospital-names
 async fn get_hospital_names_handler(
     hospitals: web::Data<Mutex<HospitalService>>
-) -> actix_web::Result<Json<Vec<String>>> {
+) -> actix_web::Result<Json<HospitalNames>> {
+    
     let mut getter = hospitals.lock().await;
 
     getter.get_all_hospitals()
         .await
-        .map(|hospitals| Json(hospitals.iter().map(|h| h.name()).collect()))
+        .map(|hospitals| {
+            let names: HashSet<String> = hospitals.iter()
+                .map(|h| h.name())
+                .collect();
+            Json(HospitalNames::new(names))
+        })
         .map_err(ErrorInternalServerError)
 }
 

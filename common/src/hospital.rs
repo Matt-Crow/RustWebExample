@@ -6,6 +6,8 @@ use std::{fmt::{Debug, Display}, collections::HashSet};
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
+use crate::hospital_names::HospitalNames;
+
 #[derive(Debug)]
 #[derive(Serialize, Deserialize)] // allows this to be converted to & from JSON
 pub struct Hospital {
@@ -208,5 +210,5 @@ pub trait HospitalDataProvider: Send + Sync {
 
 #[async_trait]
 pub trait HospitalNameProvider: Send + Sync {
-    async fn get_all_hospital_names(&self) -> Result<Vec<String>, Error>;
+    async fn get_all_hospital_names(&self) -> Result<HospitalNames, Error>;
 }

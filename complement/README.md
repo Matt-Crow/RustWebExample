@@ -6,3 +6,25 @@ and input
     `s = {B}`
 the service returns
     `s' = {A, C}`
+
+## Usage
+Ensure the `admission` project is running, then run this project.
+`GET http://localhost:8081/complement` with the following body:
+```
+{
+    "names": [
+        "Atascadero",
+        "Napa"
+    ]
+}
+```
+you should receive
+```
+{
+    "names": [
+        "Metropolitan",
+        "Patton",
+        "Coalinga"
+    ]
+}
+```
