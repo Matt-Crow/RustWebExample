@@ -6,7 +6,10 @@ use actix_web::{web::{ServiceConfig, resource, get, Json, self, post, delete}, e
 use serde::Deserialize;
 use tokio::sync::Mutex;
 
-use crate::{core::hospital_services::HospitalService, patient_services::{PatientService, PatientError}};
+use crate::{
+    hospital_services::HospitalService, 
+    patient_services::{PatientService, PatientError}
+};
 use common::{hospital::{Hospital, Patient, AdmissionStatus}, hospital_names::HospitalNames};
 
 pub fn configure_hospital_routes(cfg: &mut ServiceConfig) {
@@ -19,6 +22,11 @@ pub fn configure_hospital_routes(cfg: &mut ServiceConfig) {
         resource("/hospitals")
             .name("hospitals")
             .route(get().to(get_all_hospitals))
+    );
+    cfg.service(
+        resource("/hospitals/admit-from-waitlist")
+            .name("admit from waitlist")
+            .route(post().to(post_admit_from_waitlist_handler))
     );
     cfg.service(
         resource("/hospitals/{name}")
@@ -71,6 +79,17 @@ async fn get_all_hospitals(
 
     match mutex.get_all_hospitals().await {
         Ok(hospitals) => Ok(Json(hospitals)),
+        Err(error) => Err(ErrorInternalServerError(error))
+    }
+}
+
+async fn post_admit_from_waitlist_handler(
+    patients: web::Data<Mutex<PatientService>>
+) -> actix_web::Result<Json<Vec<Patient>>> {
+    let mut admitter = patients.lock().await;
+
+    match admitter.admit_patients_from_waitlist().await {
+        Ok(patients) => Ok(Json(patients)),
         Err(error) => Err(ErrorInternalServerError(error))
     }
 }
@@ -162,7 +181,8 @@ async fn waitlist_post_handler(
         Ok(stored) => Ok(HttpResponse::Created().json(stored)),
         Err(e) => match e {
             PatientError::AlreadyExists(id) => Err(ErrorBadRequest(format!("patient with ID {} already exists", id))),
-            PatientError::Repository(inner) => Err(ErrorInternalServerError(inner))
+            PatientError::Repository(inner) => Err(ErrorInternalServerError(inner)),
+            PatientError::Unsupported => Err(ErrorInternalServerError("?"))
         }
     }
 }

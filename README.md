@@ -6,6 +6,7 @@ An example web application using Rust for the backend. It consists of 3 parts:
 2. `census`: a simple script which retrieves data from the `admission` API and
    produces a report on how many patients are admitted.
 3. `common`: contains code shared by both other parts.
+4. `complement`: computes set complement for `admission`
 
 ## Setting up the database
 1. create a database `RustDB`
@@ -33,12 +34,15 @@ callback URL!
 
 ## Running the App
 `cargo run -p admission`
+and in another terminal
+`cargo run -p complement`
 
 ## Testing the App
 `cargo test`
 `cargo clippy`
 
 ## Demo
+todo redo with waitlist
 This app demonstrates many of the basic features common to most REST APIs.
 1. run the app and open `Postman`
 2. make a `GET` request to `localhost:8080/api/v1/hospitals` - should receive `401 unauthorized`

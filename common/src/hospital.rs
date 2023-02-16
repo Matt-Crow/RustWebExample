@@ -156,11 +156,26 @@ impl Clone for Patient {
     }
 }
 
+/// Designates whether a patients is on a waitlist, admitted to a hospital, or
+/// neither.
 #[derive(Debug, Deserialize, Serialize)]
 pub enum AdmissionStatus {
     New,
     OnWaitlist,
-    Admitted(u32)
+    AdmittedTo(String)
+}
+
+impl AdmissionStatus {
+
+    /// admitted to the hospital with the given name
+    pub fn admitted(to: &str) -> Self {
+        Self::AdmittedTo(String::from(to))
+    }
+
+    /// returns whether this patient is admitted to a hospital
+    pub fn is_admitted(&self) -> bool {
+        matches!(self, Self::AdmittedTo(_))
+    }
 }
 
 impl Clone for AdmissionStatus {
@@ -168,7 +183,7 @@ impl Clone for AdmissionStatus {
         match self {
             Self::New => Self::New,
             Self::OnWaitlist => Self::OnWaitlist,
-            Self::Admitted(id) => Self::Admitted(*id),
+            Self::AdmittedTo(name) => Self::AdmittedTo(name.to_owned())
         }
     }
 }
@@ -178,7 +193,7 @@ impl Display for AdmissionStatus {
         match self {
             Self::New => write!(f, "new patient"),
             Self::OnWaitlist => write!(f, "on waitlist"),
-            Self::Admitted(id) => write!(f, "admitted to hospital with ID {}", id)
+            Self::AdmittedTo(name) => write!(f, "admitted to {}", name)
         }
     }
 }

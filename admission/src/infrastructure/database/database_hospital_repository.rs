@@ -11,7 +11,7 @@ use bb8::Pool;
 use bb8_tiberius::ConnectionManager;
 use tiberius::ExecuteResult;
 
-use crate::{core::hospital_services::{HospitalRepository, RepositoryError}, patient_services::PatientRepository};
+use crate::{patient_services::PatientRepository, hospital_services::{HospitalRepository, RepositoryError}};
 use common::hospital::{Hospital, Patient, AdmissionStatus};
 
 use super::{database_patient_repository::DatabasePatientRepository, helpers};
@@ -95,7 +95,7 @@ impl HospitalRepository for DatabaseHospitalRepository {
                     .await
                     .map_err(RepositoryError::other)?
                     .expect("patient should exist for this ID")
-                    .with_status(AdmissionStatus::Admitted(row.hospital_id.try_into().unwrap()));
+                    .with_status(AdmissionStatus::admitted(&row.hospital_name));
                 e.add_patient(p);
             }
         }
@@ -142,7 +142,7 @@ impl HospitalRepository for DatabaseHospitalRepository {
                 .await
                 .map_err(RepositoryError::other)?
                 .expect("patient should exist for this ID")
-                .with_status(AdmissionStatus::Admitted(h.id().unwrap()));
+                .with_status(AdmissionStatus::AdmittedTo(h.name()));
             h.add_patient(p);
         }
         

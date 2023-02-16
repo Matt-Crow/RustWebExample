@@ -2,6 +2,8 @@
 // These are searched recursively to load any of their declared modules as well.
 mod core; // can declare modules as public in case other programs need them
 mod infrastructure;
+mod hospital_services;
+mod remote_complement_provider;
 mod patient_services;
 
 use std::env;
@@ -9,10 +11,12 @@ use std::env;
 use actix_session::{SessionMiddleware, storage::CookieSessionStore};
 use actix_web::{HttpServer, App, web, cookie::Key};
 use actix_web_httpauth::middleware::HttpAuthentication;
+use common::complement_service::ComplementService;
 use tokio::sync::Mutex;
 use crate::{
-    core::{users::UserService, hospital_services::HospitalService},
-    infrastructure::{routes::configure_hospital_routes, authentication::{jwt::{jwt_auth_middleware, configure_jwt_routes}, openid::{OpenIdService, configure_openid_routes}}, database::{database_hospital_repository::DatabaseHospitalRepository, pool::make_db_pool, database_group_repository::DatabaseGroupRepository, database_patient_repository::DatabasePatientRepository}}, patient_services::PatientService
+    core::users::UserService,
+    hospital_services::HospitalService,
+    infrastructure::{routes::configure_hospital_routes, authentication::{jwt::{jwt_auth_middleware, configure_jwt_routes}, openid::{OpenIdService, configure_openid_routes}}, database::{database_hospital_repository::DatabaseHospitalRepository, pool::make_db_pool, database_group_repository::DatabaseGroupRepository, database_patient_repository::DatabasePatientRepository}}, patient_services::PatientService, remote_complement_provider::RemoteComplementProvider
 };
 
 #[actix_web::main]
@@ -48,7 +52,10 @@ async fn main() -> std::io::Result<()> {
     // must be wrapped in a Mutex for synchronization
     let hosp_service = web::Data::new(Mutex::new(HospitalService::new(hospital_repo)));
     let user_service = web::Data::new(Mutex::new(UserService::new(group_repo)));
-    let patient_service = web::Data::new(Mutex::new(PatientService::new(patient_repo)));
+    let patient_service = web::Data::new(Mutex::new(PatientService::new(
+        patient_repo,
+        ComplementService::new(RemoteComplementProvider::new("http://localhost:8081"))
+    )));
     let oid = web::Data::new(openid_service); // non-writing service, so no mutex needed
 
     println!("Starting web server...");
