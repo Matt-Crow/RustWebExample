@@ -95,3 +95,4 @@ This app demonstrates many of the basic features common to most REST APIs.
 - [Serde](https://serde.rs/) JSON serialization / deserialization
 - [Tiberius](https://crates.io/crates/tiberius) Microsoft SQL client
 - [Tokio](https://tokio.rs/) asynchronous runtime
+- and more!

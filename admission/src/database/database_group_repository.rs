@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use bb8::Pool;
 use bb8_tiberius::ConnectionManager;
 
-use crate::core::users::{GroupRepository, UserError};
+use crate::user_services::{GroupRepository, UserError};
 
 use super::helpers;
 

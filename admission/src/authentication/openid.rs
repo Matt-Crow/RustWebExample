@@ -12,7 +12,7 @@ use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
-use crate::core::users::UserService;
+use crate::user_services::UserService;
 use common::user::User;
 use super::jwt::make_token;
 
