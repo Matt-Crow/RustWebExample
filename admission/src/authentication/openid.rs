@@ -10,9 +10,10 @@ use actix_web::{web::{ServiceConfig, get, self}, HttpResponse, error};
 use openidconnect::{core::{CoreProviderMetadata, CoreClient, CoreResponseType, CoreAuthPrompt}, IssuerUrl, reqwest::async_http_client, ClientId, RedirectUrl, CsrfToken, Nonce, AuthenticationFlow, Scope, ClientSecret, AuthorizationCode};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
+use tokio::sync::Mutex;
 
-use crate::core::{service_provider::ServiceProvider, users::User};
-
+use crate::user_services::UserService;
+use common::user::User;
 use super::jwt::make_token;
 
 /// used by main to set up the openid routes
@@ -47,7 +48,7 @@ async fn login_handler(
 /// we can use to obtain information granted in the scopes
 async fn handle_auth_callback(
     service: web::Data<OpenIdService>,
-    service_provider: web::Data<ServiceProvider>,
+    users: web::Data<Mutex<UserService>>,
     session: Session,
     openid_response: web::Query<AuthenticationCallbackParameters>
 ) -> actix_web::Result<HttpResponse> {
@@ -69,13 +70,11 @@ async fn handle_auth_callback(
         })
         .await
         .map_err(error::ErrorBadRequest)?;
-    
-    let mut mutex = service_provider
-        .users()
-        .lock()
+
+    let mut lock = users.lock()
         .await;
     
-    let new_user = mutex.get_user_by_email(&email)
+    let new_user = lock.get_user_by_email(&email)
         .await
         .map_err(error::ErrorInternalServerError)?;
     

@@ -1,5 +1,12 @@
 # Rust Web Example
-An example web application using Rust for the backend.
+An example web application using Rust for the backend. It consists of 3 parts:
+1. `admission`: a REST API that allows authenticated users to admit patients to
+   a hospital, unadmit patients from a hospital, and view the patients admitted
+   to a hospital.
+2. `census`: a simple script which retrieves data from the `admission` API and
+   produces a report on how many patients are admitted.
+3. `common`: contains code shared by both other parts.
+4. `complement`: computes set complement for `admission`
 
 ## Setting up the database
 1. create a database `RustDB`
@@ -8,7 +15,7 @@ An example web application using Rust for the backend.
    its default schema.
 4. give the Tiberius account permission to create table, delete, insert, select,
    and update.
-5. run the app with `cargo run -- --setup`
+5. run the app with `cargo run -p admission -- --setup`
 
 ## Setting up OpenID
 This demo uses OpenID to authenticate users with an external service. I tested 
@@ -26,13 +33,17 @@ callback URL!
 - `OPENID_CLIENT_SECRET`: the app's secret registered with the OpenID provider
 
 ## Running the App
-`cargo run`
+`cargo run -p admission`
+and in another terminal
+`cargo run -p complement`
 
 ## Testing the App
 `cargo test`
 `cargo clippy`
 
 ## Demo
+todo redo with waitlist
+
 This app demonstrates many of the basic features common to most REST APIs.
 1. run the app and open `Postman`
 2. make a `GET` request to `localhost:8080/api/v1/hospitals` - should receive `401 unauthorized`
@@ -53,7 +64,7 @@ This app demonstrates many of the basic features common to most REST APIs.
    the response from your previous request.
 5. `GET localhost:8080/api/v1/hospitals` again - you should receive a `200` response
 6. you can check out `GET localhost:8080/api/v1/hospitals/napa` or other hospitals
-7. admit a patient to Napa by `POST`ing to `localhost:8080/api/v1/hospitals/napa`
+7. add a patient to the waitlist by `POST`ing to `localhost:8080/api/v1/waitlist`
    with the following raw JSON body:
    ```
    {
@@ -63,10 +74,12 @@ This app demonstrates many of the basic features common to most REST APIs.
    You should receive `401 unauthorized`.
 8. `POST` to `localhost:8080/jwt`, but this time make sure you have the `admin` group.
 9. repeat step 7 after setting your new bearer token
-10. `GET localhost:8080/api/v1/hospitals/napa`, then locate John Brown's ID
-11. unadmit John Brown using `DELETE localhost:8080/api/v1/hospitals/napa/ID`,
+10. `GET localhost:8080/api/v1/waitlist`
+11. `POST localhost:8080/api/v1/hospitals/admit-from-waitlist` - notice
+   which hospital John Brown was admitted to, as well as their ID
+12. unadmit John Brown using `DELETE localhost:8080/api/v1/hospitals/{hospital}/{ID}`,
    where `ID` is John Brown's ID from the previous step. You should receive `204 No Content`.
-12. `GET localhost:8080/api/v1/hospitals/napa` to confirm John Brown has been
+13. `GET localhost:8080/api/v1/hospitals/{hospital}` to confirm John Brown has been
     unadmitted.
 
 ## Libraries used
@@ -82,3 +95,4 @@ This app demonstrates many of the basic features common to most REST APIs.
 - [Serde](https://serde.rs/) JSON serialization / deserialization
 - [Tiberius](https://crates.io/crates/tiberius) Microsoft SQL client
 - [Tokio](https://tokio.rs/) asynchronous runtime
+- and more!

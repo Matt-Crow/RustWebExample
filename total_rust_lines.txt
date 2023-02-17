@@ -1,1 +1,1 @@
-Get-ChildItem -Filter "*.rs" .\src -Recurse | Get-Content | Measure-Object -line
+Get-ChildItem -Filter "*.rs" .\**\src -Recurse | Get-Content | Measure-Object -line

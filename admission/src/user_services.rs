@@ -1,55 +1,10 @@
 // this module is responsible for user-related details
+// todo maybe move this to auth project
 
-use std::{collections::HashSet, fmt::Display};
+use std::fmt::Display;
 
 use async_trait::async_trait;
-use serde::{Serialize, Deserialize};
-
-/// the system representation of a user
-#[derive(Debug, Deserialize, Serialize)]
-pub struct User {
-
-    /// email must be unique within the user repository
-    email: String,
-
-    /// the authorization groups this user belongs to
-    groups: HashSet<String>
-}
-
-impl User {
-    /// creates an user with the given details
-    pub fn new(email: &str) -> Self {
-        Self {
-            email: String::from(email),
-            groups: HashSet::new()
-        }
-    }
-
-    pub fn email(&self) -> String {
-        self.email.clone()
-    }
-
-    pub fn groups(&self) -> Vec<String> {
-        self.groups.iter().cloned().collect()
-    }
-
-    /// Adds this user to the given group. 
-    /// 
-    /// It is not an error to add a user to the same group multiple times, but 
-    /// every call after the first will have no effect.
-    pub fn add_to_group(&mut self, group: &str) {
-        self.groups.insert(String::from(group));
-    }
-}
-
-impl Clone for User {
-    fn clone(&self) -> Self {
-        Self {
-            email: self.email.clone(), 
-            groups: self.groups.clone() 
-        }
-    }
-}
+use common::user::User;
 
 #[derive(Debug)]
 pub enum UserError {
@@ -87,15 +42,6 @@ impl UserService {
         }
     }
 
-    pub async fn create(&mut self, user: &User) -> Result<User, UserError> {
-        // repository does not store user details except groups
-        for group in user.groups() {
-            self.group_repository.add_email_to_group(&user.email, &group)
-                .await?;
-        }
-        Ok(user.clone())
-    }
-
     pub async fn get_user_by_email(&mut self, email: &str) -> Result<User, UserError> {
         let mut user = User::new(email);
         let groups = self.group_repository.get_groups_by_email(email)
@@ -111,7 +57,7 @@ impl UserService {
 
 /// Designates something as a backing store for mapping emails to groups
 #[async_trait]
-pub trait GroupRepository {
+pub trait GroupRepository: Send + Sync {
 
     /// Attempts to add a mapping between the given email and group.
     /// It is an error to add a group to a email who already belongs to that 
@@ -146,23 +92,7 @@ pub mod tests {
     fn first_parameter_sets_email() {
         let email = "Foo";
         let new_user = User::new(email);
-        assert_eq!(email, new_user.email);
-    }
-
-    #[tokio::test]
-    async fn create_user_given_new_email_group_inserts_in_repository() {
-        let mut user = User::new("Foo");
-        user.add_to_group("bar");
-
-        let mut repo = MockGroupDummy::new();
-        repo.expect_add_email_to_group()
-            .once()
-            .returning(|_, _| Ok(()));
-        let mut sut = UserService::new(repo);
-
-        let result = sut.create(&user).await;
-
-        assert!(result.is_ok());
+        assert_eq!(email, new_user.email());
     }
 
     #[tokio::test]
@@ -177,7 +107,7 @@ pub mod tests {
         let result = sut.get_user_by_email(email).await;
 
         assert!(result.is_ok());
-        assert!(result.unwrap().email == email);
+        assert!(result.unwrap().email() == email);
     }
 
     #[tokio::test]
@@ -192,7 +122,7 @@ pub mod tests {
 
         assert!(result.is_ok());
         let user = result.unwrap();
-        assert!(user.email == "foo.bar@baz.qux");
+        assert!(user.email() == "foo.bar@baz.qux");
         assert!(user.groups().contains(&String::from("foo")));
         assert!(user.groups().contains(&String::from("bar")));
     }
