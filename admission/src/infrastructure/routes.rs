@@ -32,7 +32,6 @@ pub fn configure_hospital_routes(cfg: &mut ServiceConfig) {
         resource("/hospitals/{name}")
             .name("hospital")
             .route(get().to(get_hospital_by_name))
-            .route(post().to(admit_patient))
     );
     cfg.service(
         resource("/hospitals/{name}/{patient_id}")
@@ -40,13 +39,9 @@ pub fn configure_hospital_routes(cfg: &mut ServiceConfig) {
             .route(delete().to(unadmit_patient))
     );
     cfg.service(
-        resource("/patients")
-            .name("patients")
-            .route(get().to(patients_get_handler))
-    );
-    cfg.service(
         resource("/waitlist")
             .name("waitlist")
+            .route(get().to(waitlist_get_handler))
             .route(post().to(waitlist_post_handler))  
     );
 }
@@ -117,26 +112,6 @@ struct NewPatient {
     disallow_admission_to: Option<HashSet<String>>
 }
 
-async fn admit_patient(
-    hospitals: web::Data<Mutex<HospitalService>>,
-    hospital_name: web::Path<String>,
-    posted: Json<NewPatient>
-) -> actix_web::Result<Json<Hospital>> {
-    let mut updater = hospitals.lock().await;
-
-    let mut patient = Patient::new(&posted.name)
-        .with_random_id();
-    if let Some(ref disallowed_hospitals) = posted.disallow_admission_to {
-        patient = patient.with_disallowed_hospitals(disallowed_hospitals);
-    }
-    println!("Patient: {:#?}", patient);
-
-    match updater.admit_patient_to_hospital(patient, &hospital_name).await {
-        Ok(hospital) => Ok(Json(hospital)),
-        Err(e) => Err(ErrorInternalServerError(e))
-    }
-}
-
 async fn unadmit_patient(
     hospitals: web::Data<Mutex<HospitalService>>,
     path: web::Path<(String, uuid::Uuid)>,
@@ -151,12 +126,12 @@ async fn unadmit_patient(
     }
 }
 
-async fn patients_get_handler(
+async fn waitlist_get_handler(
     patients: web::Data<Mutex<PatientService>>
 ) -> impl Responder {
     let mut service = patients.lock().await;
 
-    service.get_all_patients()
+    service.get_waitlisted_patients()
         .await
         .map(|ps| HttpResponse::Ok().json(ps))
         .map_err(ErrorInternalServerError)

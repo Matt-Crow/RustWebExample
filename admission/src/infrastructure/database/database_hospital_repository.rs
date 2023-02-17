@@ -4,7 +4,7 @@
 // Rust ecosystem does not currently have an ORM for MSSQL, so we have to
 // manually construct the SQL queries ourselves.
 
-use std::{fs::read_to_string, collections::HashMap, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
 use bb8::Pool;
@@ -12,7 +12,7 @@ use bb8_tiberius::ConnectionManager;
 use tiberius::ExecuteResult;
 
 use crate::{patient_services::PatientRepository, hospital_services::{HospitalRepository, RepositoryError}};
-use common::hospital::{Hospital, Patient, AdmissionStatus};
+use common::hospital::{Hospital, AdmissionStatus};
 
 use super::{database_patient_repository::DatabasePatientRepository, helpers};
 
@@ -33,8 +33,27 @@ impl DatabaseHospitalRepository {
     }
 
     pub async fn setup(&mut self) -> Result<ExecuteResult, RepositoryError> {
-        let content = read_to_string("./admission/setup.sql")
-            .map_err(|e| RepositoryError::other(&e.to_string()))?;
+        let content = "
+            IF OBJECT_ID(N'rust.Hospitals', N'U') IS NOT NULL
+                DROP TABLE rust.Hospitals;
+            
+            CREATE TABLE rust.Hospitals (
+                HospitalID int IDENTITY(1, 1) PRIMARY KEY NOT NULL,
+                Name varchar(16) NOT NULL
+            );
+            
+            SET IDENTITY_INSERT rust.Hospitals ON; -- allow script to set hospital IDs
+            
+            INSERT INTO rust.Hospitals (HospitalID, Name)
+            VALUES
+                (1, 'Atascadero'),
+                (2, 'Coalinga'),
+                (3, 'Metropolitan'),
+                (4, 'Napa'),
+                (5, 'Patton');
+            
+            SET IDENTITY_INSERT rust.Hospitals OFF;
+        ";
 
         let mut conn = self.pool.get()
             .await
@@ -147,34 +166,6 @@ impl HospitalRepository for DatabaseHospitalRepository {
         }
         
         Ok(Some(h))
-    }
-
-    async fn add_patient_to_hospital(&mut self, hospital_name: &str, patient: Patient) -> Result<Hospital, RepositoryError> {
-        let q = "
-            INSERT INTO rust.Patients (PatientID, Name, HospitalID)
-            VALUES (@P1, @P2, (
-                SELECT HospitalID
-                  FROM rust.Hospitals
-                 WHERE UPPER(Name) = @P3
-            ))
-            ;
-        ";
-        
-        {
-            // perform the insertion in an inner scope so the borrow of self
-            // gets dropped before the call to self.get_hospital
-            let mut conn = self.pool.get()
-                .await
-                .map_err(RepositoryError::other)?;
-
-            let _result = conn.execute(q, &[&patient.id().unwrap(), &patient.name(), &hospital_name.to_uppercase()])
-                .await
-                .map_err(RepositoryError::tiberius)?;
-        }
-        
-        self.get_hospital(hospital_name)
-            .await?
-            .ok_or_else(|| RepositoryError::invalid_hospital_name(hospital_name))
     }
 
     async fn remove_patient_from_hospital(&mut self, patient_id: uuid::Uuid, hospital_name: &str) -> Result<Hospital, RepositoryError> {

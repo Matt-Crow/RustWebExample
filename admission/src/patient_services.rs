@@ -21,8 +21,8 @@ impl PatientService {
         }
     }
 
-    pub async fn get_all_patients(&mut self) -> Result<Vec<Patient>, PatientError> {
-        self.patient_repository.get_all_patients().await
+    pub async fn get_waitlisted_patients(&mut self) -> Result<Vec<Patient>, PatientError> {
+        self.patient_repository.get_waitlisted_patients().await
     }
 
     /// Adds the given patient to the hospital admission waitlist, if they have
@@ -31,7 +31,7 @@ impl PatientService {
     pub async fn add_patient_to_waitlist(&mut self, patient: &Patient) -> Result<Patient, PatientError> {
         match patient.id() {
             Some(id) => Err(PatientError::AlreadyExists(id)),
-            None => self.patient_repository.store_patient(&patient.with_status(AdmissionStatus::OnWaitlist)).await
+            None => self.patient_repository.store_patient(&patient.with_status(AdmissionStatus::OnWaitlist).with_random_id()).await
         }
     }
 
