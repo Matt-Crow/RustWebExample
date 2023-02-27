@@ -42,7 +42,6 @@ and in another terminal
 `cargo clippy`
 
 ## Demo
-todo redo with waitlist
 
 This app demonstrates many of the basic features common to most REST APIs.
 1. run the app and open `Postman`

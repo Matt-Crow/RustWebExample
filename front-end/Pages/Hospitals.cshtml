@@ -1,0 +1,21 @@
+﻿@page
+@model Admission.FrontEnd.Pages.HospitalsModel;
+@{
+}
+
+<h1>Hospitals</h1>
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var Hospital in Model.Hospitals)
+        {
+            <tr>
+                <td>@Html.DisplayFor(mi => Hospital.Name)</td>
+            </tr>
+        }
+    </tbody>
+</table>
