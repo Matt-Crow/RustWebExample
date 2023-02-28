@@ -3,6 +3,7 @@
 mod authentication;
 mod database;
 mod hospital_services;
+mod json;
 mod remote_complement_provider;
 mod routes;
 mod patient_services;

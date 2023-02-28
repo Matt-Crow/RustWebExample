@@ -38,6 +38,6 @@ public class AdmissionsClient
         {
             throw new Exception("get all hospitals failed to deserialize server response");
         }
-        return result; // isn't deserializing patient status properly
+        return result;
     }
 }

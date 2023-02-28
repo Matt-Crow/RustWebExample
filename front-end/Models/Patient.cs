@@ -8,5 +8,5 @@ public class Patient
 
     public HashSet<string> DisallowAdmissionTo { get; set; } = new();
 
-    public AdmissionStatus Status { get; set; } = AdmissionStatus.NEW;
+    public string? AdmittedTo { get; set; }
 }

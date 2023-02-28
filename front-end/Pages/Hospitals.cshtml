@@ -8,6 +8,7 @@
     <thead>
         <tr>
             <th>Name</th>
+            <th>Total Patients</th>
         </tr>
     </thead>
     <tbody>
@@ -15,6 +16,7 @@
         {
             <tr>
                 <td>@Html.DisplayFor(mi => Hospital.Name)</td>
+                <td>@Html.DisplayFor(mi => Hospital.Patients.Count)</td>
             </tr>
         }
     </tbody>

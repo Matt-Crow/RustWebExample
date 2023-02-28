@@ -8,6 +8,7 @@ use tokio::sync::Mutex;
 
 use crate::{
     hospital_services::HospitalService, 
+    json,
     patient_services::{PatientService, PatientError}
 };
 use common::{hospital::{Hospital, Patient, AdmissionStatus}, hospital_names::HospitalNames};
@@ -67,13 +68,13 @@ async fn get_hospital_names_handler(
 async fn get_all_hospitals(
     // web::Data grabs shared state registered during app creation
     hospitals: web::Data<Mutex<HospitalService>>
-) -> actix_web::Result<Json<Vec<Hospital>>> {
+) -> actix_web::Result<Json<Vec<json::Hospital>>> {
     // actix web has its own Result type, not to be confused with Rust's
     // since the app state is shared across threads, need mutex to use it
     let mut mutex = hospitals.lock().await;
 
     match mutex.get_all_hospitals().await {
-        Ok(hospitals) => Ok(Json(hospitals)),
+        Ok(hospitals) => Ok(Json(hospitals.into_iter().map(json::Hospital::from).collect())),
         Err(error) => Err(ErrorInternalServerError(error))
     }
 }
