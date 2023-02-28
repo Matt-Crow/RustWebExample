@@ -1,0 +1,25 @@
+﻿@page
+@model Admission.FrontEnd.Pages.Hospitals.IndexModel;
+@{
+}
+
+<h1>Hospitals</h1>
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Total Patients</th>
+            <th>Details</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var hospital in Model.Hospitals)
+        {
+            <tr>
+                <td>@Html.DisplayFor(mi => hospital.Name)</td>
+                <td>@Html.DisplayFor(mi => hospital.Patients.Count)</td>
+                <td><a asp-page="./Details" asp-route-name="@hospital.Name">Details</a></td>
+            </tr>
+        }
+    </tbody>
+</table>

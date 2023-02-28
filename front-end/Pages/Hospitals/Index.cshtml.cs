@@ -3,13 +3,13 @@ using Admission.FrontEnd.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace Admission.FrontEnd.Pages;
+namespace Admission.FrontEnd.Pages.Hospitals;
 
-public class HospitalsModel : PageModel
+public class IndexModel : PageModel
 {
     private readonly AdmissionsClient _client;
 
-    public HospitalsModel(AdmissionsClient client)
+    public IndexModel(AdmissionsClient client)
     {
         _client = client;
     }
@@ -23,5 +23,11 @@ public class HospitalsModel : PageModel
             Email = "john.doe@dsh.ca.gov"
         });
         Hospitals = await _client.GetAllHospitals();
+        Hospitals.Sort(CompareHospitals);
+    }
+
+    private static int CompareHospitals(Hospital a, Hospital b)
+    {
+        return a.Name.CompareTo(b.Name);
     }
 }

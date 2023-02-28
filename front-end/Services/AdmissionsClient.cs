@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Net;
 using Admission.FrontEnd.Models;
 
 namespace Admission.FrontEnd.Services;
@@ -39,5 +40,23 @@ public class AdmissionsClient
             throw new Exception("get all hospitals failed to deserialize server response");
         }
         return result;
+    }
+
+    public async Task<Hospital?> GetHospitalByName(string name)
+    {
+        Hospital? found = null;
+        try 
+        {
+            found = await _httpClient.GetFromJsonAsync<Hospital?>($"api/v1/hospitals/{name}");
+        }
+        catch (HttpRequestException ex)
+        {
+            if (ex.StatusCode != HttpStatusCode.NotFound)
+            {
+                throw ex;
+            }
+            // ignore Http 404 errors
+        }
+        return found;
     }
 }

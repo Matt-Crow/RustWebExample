@@ -1,0 +1,28 @@
+@page "{name}"
+@model Admission.FrontEnd.Pages.HospitalsModel.DetailsModel;
+
+<h1>@Model.Name</h1>
+
+@if (Model.Hospital is null)
+{
+    <p>Hospital not found with name @Model.Name</p>
+}
+else
+{
+    <h2>Patients</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var patient in Model.Hospital.Patients)
+            {
+                <tr>
+                    <td>@Html.DisplayFor(_ => patient.Name)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

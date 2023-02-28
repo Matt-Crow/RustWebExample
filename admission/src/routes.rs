@@ -11,7 +11,7 @@ use crate::{
     json,
     patient_services::{PatientService, PatientError}
 };
-use common::{hospital::{Hospital, Patient, AdmissionStatus}, hospital_names::HospitalNames};
+use common::{hospital::{Patient, AdmissionStatus}, hospital_names::HospitalNames};
 
 pub fn configure_hospital_routes(cfg: &mut ServiceConfig) {
     cfg.service(
@@ -93,12 +93,12 @@ async fn post_admit_from_waitlist_handler(
 async fn get_hospital_by_name(
     hospitals: web::Data<Mutex<HospitalService>>,
     name: web::Path<String>
-) -> actix_web::Result<Json<Hospital>> {
+) -> actix_web::Result<Json<json::Hospital>> {
     let mut getter = hospitals.lock().await;
 
     match getter.get_hospital_by_name(&name).await {
         Ok(maybe_hospital) => match maybe_hospital {
-            Some(hospital) => Ok(Json(hospital)),
+            Some(hospital) => Ok(Json(hospital.into())),
             None => Err(ErrorNotFound(format!("Invalid hospital name: {}", name)))        
         },
         Err(e) => {
