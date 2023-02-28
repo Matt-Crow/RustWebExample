@@ -59,4 +59,14 @@ public class AdmissionsClient
         }
         return found;
     }
+
+    public async Task<List<Patient>> GetWaitlist()
+    {
+        var result = await _httpClient.GetFromJsonAsync<List<Patient>>("api/v1/waitlist");
+        if (result is null)
+        {
+            throw new Exception("get waitlist failed to deserialize server response");
+        }
+        return result;
+    }
 }

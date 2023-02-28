@@ -24,10 +24,7 @@ public class DetailsModel : PageModel
             Email = "john.doe@dsh.ca.gov"
         });
         Hospital = await _client.GetHospitalByName(name);
-        if (Hospital is not null)
-        {
-            Hospital.Patients.Sort(ComparePatients);
-        }
+        Hospital?.Patients.Sort(ComparePatients);
     }
 
     private static int ComparePatients(Patient a, Patient b)
