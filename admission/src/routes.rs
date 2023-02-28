@@ -134,7 +134,7 @@ async fn waitlist_get_handler(
 
     service.get_waitlisted_patients()
         .await
-        .map(|ps| HttpResponse::Ok().json(ps))
+        .map(|ps| HttpResponse::Ok().json(ps.into_iter().map(json::Patient::from).collect::<Vec<json::Patient>>()))
         .map_err(ErrorInternalServerError)
 }
 

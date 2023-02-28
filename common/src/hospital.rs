@@ -67,6 +67,7 @@ impl PartialEq for Hospital {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Patient {
     id: Option<Uuid>,
     name: String,

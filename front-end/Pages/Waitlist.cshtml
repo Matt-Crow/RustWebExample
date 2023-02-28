@@ -1,0 +1,21 @@
+@page
+@model Admission.FrontEnd.Pages.WaitlistModel;
+
+<h1>Waitlist</h1>
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Cannot admit to</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var patient in Model.Patients)
+        {
+            <tr>
+                <td>@Html.DisplayFor(p => patient.Name)</td>
+                <td>@(string.Join(", ", patient.DisallowAdmissionTo))</td>
+            </tr>
+        }
+    </tbody>
+</table>
