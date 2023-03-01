@@ -1,7 +1,7 @@
 use std::{error::Error, fmt::Display};
 
 use async_trait::async_trait;
-use common::{patients::{Patient, AdmissionStatus}, complement_service::ComplementService};
+use common::{patient::{Patient, AdmissionStatus}, complement_service::ComplementService};
 use uuid::Uuid;
 
 /// provides services related to patients

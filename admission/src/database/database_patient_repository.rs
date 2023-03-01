@@ -3,7 +3,7 @@ use std::collections::{HashSet, HashMap};
 use async_trait::async_trait;
 use bb8::Pool;
 use bb8_tiberius::ConnectionManager;
-use common::patients::{Patient, AdmissionStatus};
+use common::patient::{Patient, AdmissionStatus};
 use futures_util::Future;
 use tiberius::ExecuteResult;
 

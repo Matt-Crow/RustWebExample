@@ -13,7 +13,7 @@ use tiberius::ExecuteResult;
 
 use crate::{patient_services::PatientRepository, hospital_services::{HospitalRepository, RepositoryError}};
 use common::hospital::Hospital;
-use common::patients::AdmissionStatus;
+use common::patient::AdmissionStatus;
 
 use super::{database_patient_repository::DatabasePatientRepository, helpers};
 

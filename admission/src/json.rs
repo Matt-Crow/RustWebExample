@@ -3,7 +3,7 @@
 
 use std::collections::HashSet;
 
-use common::patients::AdmissionStatus;
+use common::patient::AdmissionStatus;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -56,8 +56,8 @@ pub struct Patient {
     admitted_to: Option<String>
 }
 
-impl From<common::patients::Patient> for Patient {
-    fn from(model: common::patients::Patient) -> Patient {
+impl From<common::patient::Patient> for Patient {
+    fn from(model: common::patient::Patient) -> Patient {
         Patient { 
             id: model.id(), 
             name: model.name(), 
@@ -70,9 +70,9 @@ impl From<common::patients::Patient> for Patient {
     }
 }
 
-impl From<Patient> for common::patients::Patient {
-    fn from(json: Patient) -> common::patients::Patient {
-        let mut p = common::patients::Patient::new(&json.name)
+impl From<Patient> for common::patient::Patient {
+    fn from(json: Patient) -> common::patient::Patient {
+        let mut p = common::patient::Patient::new(&json.name)
             .with_disallowed_hospitals(&json.disallow_admission_to);
         
         if let Some(id) = json.id {

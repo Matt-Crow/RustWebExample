@@ -5,7 +5,7 @@ use std::fmt::{Debug, Display};
 // the serde (SERialize DEserialize) crate helps convert data to & from JSON
 use serde::{Serialize, Deserialize};
 
-use crate::{hospital_names::HospitalNames, patients::Patient};
+use crate::{hospital_names::HospitalNames, patient::Patient};
 
 #[derive(Debug)]
 #[derive(Serialize, Deserialize)] // allows this to be converted to & from JSON
