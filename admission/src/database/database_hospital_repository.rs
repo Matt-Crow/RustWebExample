@@ -12,7 +12,8 @@ use bb8_tiberius::ConnectionManager;
 use tiberius::ExecuteResult;
 
 use crate::{patient_services::PatientRepository, hospital_services::{HospitalRepository, RepositoryError}};
-use common::hospital::{Hospital, AdmissionStatus};
+use common::hospital::Hospital;
+use common::patients::AdmissionStatus;
 
 use super::{database_patient_repository::DatabasePatientRepository, helpers};
 

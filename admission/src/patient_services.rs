@@ -1,7 +1,7 @@
 use std::{error::Error, fmt::Display};
 
 use async_trait::async_trait;
-use common::{hospital::{Patient, AdmissionStatus}, complement_service::ComplementService};
+use common::{patients::{Patient, AdmissionStatus}, complement_service::ComplementService};
 use uuid::Uuid;
 
 /// provides services related to patients
@@ -100,7 +100,7 @@ impl Display for PatientError {
 mod tests {
     use std::collections::HashSet;
 
-    use common::{hospital::{Patient, AdmissionStatus}, complement_service::ComplementProvider};
+    use common::complement_service::ComplementProvider;
     use mockall::mock;
 
     use super::*;

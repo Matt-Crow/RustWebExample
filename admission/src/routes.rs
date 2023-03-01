@@ -11,7 +11,7 @@ use crate::{
     json,
     patient_services::{PatientService, PatientError}
 };
-use common::{hospital::{Patient, AdmissionStatus}, hospital_names::HospitalNames};
+use common::{patients::{Patient, AdmissionStatus}, hospital_names::HospitalNames};
 
 pub fn configure_hospital_routes(cfg: &mut ServiceConfig) {
     cfg.service(
