@@ -13,7 +13,6 @@ use tiberius::ExecuteResult;
 
 use crate::{patient_services::PatientRepository, hospital_services::{HospitalRepository, RepositoryError}};
 use common::hospital::Hospital;
-use common::patient::AdmissionStatus;
 
 use super::{database_patient_repository::DatabasePatientRepository, helpers};
 
@@ -115,7 +114,7 @@ impl HospitalRepository for DatabaseHospitalRepository {
                     .await
                     .map_err(RepositoryError::other)?
                     .expect("patient should exist for this ID")
-                    .with_status(AdmissionStatus::admitted(&row.hospital_name));
+                    .admit_to(&row.hospital_name);
                 e.add_patient(p);
             }
         }
@@ -162,7 +161,7 @@ impl HospitalRepository for DatabaseHospitalRepository {
                 .await
                 .map_err(RepositoryError::other)?
                 .expect("patient should exist for this ID")
-                .with_status(AdmissionStatus::AdmittedTo(h.name()));
+                .admit_to(&h.name());
             h.add_patient(p);
         }
         

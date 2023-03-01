@@ -9,6 +9,7 @@ use crate::{hospital_names::HospitalNames, patient::Patient};
 
 #[derive(Debug)]
 #[derive(Serialize, Deserialize)] // allows this to be converted to & from JSON
+#[serde(rename_all = "camelCase")]
 pub struct Hospital {
     id: Option<u32>, // Option means this could potentially have no ID 
     name: String,

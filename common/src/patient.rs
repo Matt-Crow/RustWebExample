@@ -1,5 +1,4 @@
-use std::{collections::HashSet, fmt::Display};
-
+use std::collections::HashSet;
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
@@ -9,7 +8,10 @@ pub struct Patient {
     id: Option<Uuid>,
     name: String,
     disallow_admission_to: HashSet<String>,
-    status: AdmissionStatus
+
+    /// the name of the hospital this patient is admitted to, or none if they
+    /// are on the waitlist to get into a hospital
+    admitted_to: Option<String>
 }
 
 impl PartialEq for Patient {
@@ -24,7 +26,7 @@ impl Patient {
             id: None,
             name: name.to_owned(),
             disallow_admission_to: HashSet::new(),
-            status: AdmissionStatus::New
+            admitted_to: None
         }
     }
 
@@ -33,7 +35,7 @@ impl Patient {
             id: Some(id),
             name: self.name.to_owned(),
             disallow_admission_to: self.disallow_admission_to.to_owned(),
-            status: self.status.clone()
+            admitted_to: self.admitted_to()
         }
     }
 
@@ -49,16 +51,27 @@ impl Patient {
             id: self.id.to_owned(),
             name: self.name.to_owned(),
             disallow_admission_to: disallowed_hospitals.to_owned(),
-            status: self.status.to_owned()
+            admitted_to: self.admitted_to()
         }
     }
 
-    pub fn with_status(&self, status: AdmissionStatus) -> Self {
+    /// returns a copy of this patient except admitted to the given hospital
+    pub fn admit_to(&self, hospital: &str) -> Self {
         Self {
-            id: self.id.to_owned(),
-            name: self.name.to_owned(),
-            disallow_admission_to: self.disallow_admission_to.to_owned(),
-            status
+            id: self.id(),
+            name: self.name(),
+            disallow_admission_to: self.disallowed_hospitals(),
+            admitted_to: Some(hospital.to_owned())
+        }
+    }
+
+    /// returns a copy of this patient, but on the waitlist
+    pub fn waitlisted(&self) -> Self {
+        Self {
+            id: self.id(),
+            name: self.name(),
+            disallow_admission_to: self.disallowed_hospitals(),
+            admitted_to: None
         }
     }
 
@@ -78,8 +91,21 @@ impl Patient {
         self.disallow_admission_to.to_owned()
     }
 
-    pub fn status(&self) -> AdmissionStatus {
-        self.status.to_owned()
+    /// returns the name of the hospital this patient is admitted to, or None if
+    /// they are not yet admitted to a hospital, and are thus on the waitlist.
+    pub fn admitted_to(&self) -> Option<String> {
+        self.admitted_to.to_owned()
+    }
+
+    /// returns whether this patient is admitted to a hospital
+    pub fn is_admitted(&self) -> bool {
+        self.admitted_to().is_some()
+    }
+
+    /// returns whether this patient is on the waitlist to be admitted to a
+    /// hospital
+    pub fn is_waitlisted(&self) -> bool {
+        self.admitted_to().is_none()
     }
 }
 
@@ -89,49 +115,7 @@ impl Clone for Patient {
             id: self.id,
             name: self.name.to_string(),
             disallow_admission_to: self.disallow_admission_to.to_owned(),
-            status: self.status.clone()
-        }
-    }
-}
-
-/// Designates whether a patients is on a waitlist, admitted to a hospital, or
-/// neither.
-#[derive(Debug, Deserialize, Serialize)]
-pub enum AdmissionStatus {
-    New,
-    OnWaitlist,
-    AdmittedTo(String)
-}
-
-impl AdmissionStatus {
-
-    /// admitted to the hospital with the given name
-    pub fn admitted(to: &str) -> Self {
-        Self::AdmittedTo(String::from(to))
-    }
-
-    /// returns whether this patient is admitted to a hospital
-    pub fn is_admitted(&self) -> bool {
-        matches!(self, Self::AdmittedTo(_))
-    }
-}
-
-impl Clone for AdmissionStatus {
-    fn clone(&self) -> Self {
-        match self {
-            Self::New => Self::New,
-            Self::OnWaitlist => Self::OnWaitlist,
-            Self::AdmittedTo(name) => Self::AdmittedTo(name.to_owned())
-        }
-    }
-}
-
-impl Display for AdmissionStatus {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::New => write!(f, "new patient"),
-            Self::OnWaitlist => write!(f, "on waitlist"),
-            Self::AdmittedTo(name) => write!(f, "admitted to {}", name)
+            admitted_to: self.admitted_to.clone()
         }
     }
 }

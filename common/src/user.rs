@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 /// the system representation of a user
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct User {
 
     /// email must be unique within the user repository

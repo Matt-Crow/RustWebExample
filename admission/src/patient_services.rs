@@ -1,7 +1,7 @@
 use std::{error::Error, fmt::Display};
 
 use async_trait::async_trait;
-use common::{patient::{Patient, AdmissionStatus}, complement_service::ComplementService};
+use common::{patient::Patient, complement_service::ComplementService};
 use uuid::Uuid;
 
 /// provides services related to patients
@@ -31,7 +31,7 @@ impl PatientService {
     pub async fn add_patient_to_waitlist(&mut self, patient: &Patient) -> Result<Patient, PatientError> {
         match patient.id() {
             Some(id) => Err(PatientError::AlreadyExists(id)),
-            None => self.patient_repository.store_patient(&patient.with_status(AdmissionStatus::OnWaitlist).with_random_id()).await
+            None => self.patient_repository.store_patient(&patient.waitlisted().with_random_id()).await
         }
     }
 
@@ -49,7 +49,7 @@ impl PatientService {
             
             // pick one from each
             if let Some(hospital) = t.iter().next() {
-                updated.push(patient.with_status(AdmissionStatus::admitted(hospital)));
+                updated.push(patient.admit_to(hospital));
             }
         }
 
@@ -175,7 +175,7 @@ mod tests {
     async fn admit_patients_from_waitlist_given_a_waitlisted_patient_adds_them_to_a_hospital() {
         let a_waitlisted_patient = Patient::new("Foo")
             .with_random_id()
-            .with_status(AdmissionStatus::OnWaitlist);
+            .waitlisted();
 
         let mut repo = MockPatients::new();
         repo.expect_get_waitlisted_patients()
@@ -201,6 +201,6 @@ mod tests {
         assert!(result.is_ok());
         let updated_patients = result.unwrap();
         assert!(updated_patients.len() == 1);
-        assert!(updated_patients.iter().all(|p| p.status().is_admitted()));
+        assert!(updated_patients.iter().all(Patient::is_admitted));
     }
 }

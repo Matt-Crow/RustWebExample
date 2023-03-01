@@ -7,11 +7,10 @@ use serde::Deserialize;
 use tokio::sync::Mutex;
 
 use crate::{
-    hospital_services::HospitalService, 
-    json,
+    hospital_services::HospitalService,
     patient_services::{PatientService, PatientError}
 };
-use common::{patient::{Patient, AdmissionStatus}, hospital_names::HospitalNames};
+use common::{patient::Patient, hospital_names::HospitalNames, hospital::Hospital};
 
 pub fn configure_hospital_routes(cfg: &mut ServiceConfig) {
     cfg.service(
@@ -68,13 +67,13 @@ async fn get_hospital_names_handler(
 async fn get_all_hospitals(
     // web::Data grabs shared state registered during app creation
     hospitals: web::Data<Mutex<HospitalService>>
-) -> actix_web::Result<Json<Vec<json::Hospital>>> {
+) -> actix_web::Result<Json<Vec<Hospital>>> {
     // actix web has its own Result type, not to be confused with Rust's
     // since the app state is shared across threads, need mutex to use it
     let mut mutex = hospitals.lock().await;
 
     match mutex.get_all_hospitals().await {
-        Ok(hospitals) => Ok(Json(hospitals.into_iter().map(json::Hospital::from).collect())),
+        Ok(hospitals) => Ok(Json(hospitals)),
         Err(error) => Err(ErrorInternalServerError(error))
     }
 }
@@ -93,12 +92,12 @@ async fn post_admit_from_waitlist_handler(
 async fn get_hospital_by_name(
     hospitals: web::Data<Mutex<HospitalService>>,
     name: web::Path<String>
-) -> actix_web::Result<Json<json::Hospital>> {
+) -> actix_web::Result<Json<Hospital>> {
     let mut getter = hospitals.lock().await;
 
     match getter.get_hospital_by_name(&name).await {
         Ok(maybe_hospital) => match maybe_hospital {
-            Some(hospital) => Ok(Json(hospital.into())),
+            Some(hospital) => Ok(Json(hospital)),
             None => Err(ErrorNotFound(format!("Invalid hospital name: {}", name)))        
         },
         Err(e) => {
@@ -134,7 +133,7 @@ async fn waitlist_get_handler(
 
     service.get_waitlisted_patients()
         .await
-        .map(|ps| HttpResponse::Ok().json(ps.into_iter().map(json::Patient::from).collect::<Vec<json::Patient>>()))
+        .map(|ps| HttpResponse::Ok().json(ps))
         .map_err(ErrorInternalServerError)
 }
 
@@ -145,8 +144,7 @@ async fn waitlist_post_handler(
 ) -> impl Responder {
     let mut service = patients.lock().await;
 
-    let mut patient = Patient::new(&posted.name)
-        .with_status(AdmissionStatus::New);
+    let mut patient = Patient::new(&posted.name);
 
     if let Some(ref disallowed_hospitals) = posted.disallow_admission_to {
         patient = patient.with_disallowed_hospitals(disallowed_hospitals);

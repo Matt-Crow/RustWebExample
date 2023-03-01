@@ -3,7 +3,7 @@ use std::collections::{HashSet, HashMap};
 use async_trait::async_trait;
 use bb8::Pool;
 use bb8_tiberius::ConnectionManager;
-use common::patient::{Patient, AdmissionStatus};
+use common::patient::Patient;
 use futures_util::Future;
 use tiberius::ExecuteResult;
 
@@ -88,7 +88,7 @@ impl DatabasePatientRepository {
     async fn store_new_patient(&mut self, patient: &Patient) -> Result<Patient, PatientError> {
         let store_me = patient
             .with_random_id()
-            .with_status(AdmissionStatus::OnWaitlist);
+            .waitlisted();
 
         let q = "
             INSERT INTO rust.Patients (PatientID, Name)
@@ -183,10 +183,13 @@ struct PatientDisallowedHospitalMapping {
 #[async_trait]
 impl PatientRepository for DatabasePatientRepository {
     async fn store_patient(&mut self, patient: &Patient) -> Result<Patient, PatientError> {
-        match patient.status() {
-            AdmissionStatus::New => self.store_new_patient(patient).await,
-            AdmissionStatus::OnWaitlist => self.store_waitlisted_patient(patient).await,
-            AdmissionStatus::AdmittedTo(ref hospital_name) => self.store_admitted_patient(patient, hospital_name).await
+        if patient.id().is_none() {
+            // new patient
+            self.store_new_patient(patient).await
+        } else if let Some(ref hospital_name) = patient.admitted_to() {
+            self.store_admitted_patient(patient, hospital_name).await
+        } else {
+            self.store_waitlisted_patient(patient).await
         }
     }
 
@@ -234,8 +237,8 @@ impl PatientRepository for DatabasePatientRepository {
                     let np = Patient::new(&row.patient_name)
                         .with_id(row.patient_id);
                     match row.hospital_name {
-                        Some(hospital_name) => np.with_status(AdmissionStatus::AdmittedTo(hospital_name)),
-                        None => np.with_status(AdmissionStatus::OnWaitlist)
+                        Some(ref hospital_name) => np.admit_to(hospital_name),
+                        None => np.waitlisted()
                     }
                 });
 
@@ -252,7 +255,7 @@ impl PatientRepository for DatabasePatientRepository {
             .await?;
         let waitlisted = all_patients
             .into_iter()
-            .filter(|p| matches!(p.status(), AdmissionStatus::OnWaitlist))
+            .filter(Patient::is_waitlisted)
             .collect();
         Ok(waitlisted)
     }
@@ -300,9 +303,9 @@ impl PatientRepository for DatabasePatientRepository {
         } else {
             let mut p = Patient::new(&rows[0].patient_name)
                 .with_id(id);
-            match rows[0].hospital_name {
-                Some(ref hospital_name) => p = p.with_status(AdmissionStatus::admitted(hospital_name)),
-                None => p = p.with_status(AdmissionStatus::OnWaitlist)
+            p = match rows[0].hospital_name {
+                Some(ref hospital_name) => p.admit_to(hospital_name),
+                None => p.waitlisted()
             };
 
             let disallowed_hospitals: HashSet<String> = rows.iter()
@@ -315,10 +318,8 @@ impl PatientRepository for DatabasePatientRepository {
     }
 
     async fn update_patient_hospital(&mut self, patient: &Patient) -> Result<Patient, PatientError> {
-        let hospital = match patient.status() {
-            AdmissionStatus::AdmittedTo(h) => Ok(h),
-            _ => Err(PatientError::Unsupported)
-        }?;
+        let hospital = patient.admitted_to() // must have a hospital to update
+            .ok_or(PatientError::Unsupported)?;
 
         let q = "
             UPDATE rust.Patients
