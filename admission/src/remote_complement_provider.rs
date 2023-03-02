@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use async_trait::async_trait;
-use common::{complement_service::ComplementProvider, hospital_names::HospitalNames};
+use common::{complement_service::ComplementProvider, hospital::GetHospitalNamesResponse};
 
 
 
@@ -20,8 +20,8 @@ impl RemoteComplementProvider {
 #[async_trait]
 impl ComplementProvider for RemoteComplementProvider {
     async fn compute_complement(&self, set: HashSet<String>) -> HashSet<String> {
-        let body = HospitalNames::new(set);
-        let response: HospitalNames = reqwest::Client::new()
+        let body = GetHospitalNamesResponse::new(&set);
+        let response: GetHospitalNamesResponse = reqwest::Client::new()
             .get(self.url.to_owned() + "/complement")
             .json(&body)
             .send()
@@ -29,7 +29,7 @@ impl ComplementProvider for RemoteComplementProvider {
             .expect("request should be OK")
             .json()
             .await
-            .expect("should be able to convert to HospitalNames");
-        response.names()
+            .expect("should be able to convert to GetHospitalNamesResponse");
+        response.hospital_names()
     }
 }
