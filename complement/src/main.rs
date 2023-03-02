@@ -2,13 +2,13 @@ use std::{collections::HashSet, sync::Arc};
 
 use actix_web::{get, Responder, HttpServer, App, HttpResponse, web::{Json, self}, error::ErrorInternalServerError};
 use async_trait::async_trait;
-use common::{hospital::{GetHospitalNamesResponse, GetHospitalNames, HospitalError, GetHospitalNamesRequest}, user::User, http_client::HttpClient};
+use common::{hospital::{GetHospitalNamesResponse, GetHospitalNames, HospitalError, GetHospitalNamesRequest}, user::LoginRequest, http_client::HttpClient};
 use tokio::sync::Mutex;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let mut client = HttpClient::new("http://localhost:8080"); // todo read URL from env
-    let user = User::new("Complement Demo");
+    let user = LoginRequest::new("Complement Demo");
     client.authenticate_as(&user)
         .await
         .expect("should be able to authenticate");

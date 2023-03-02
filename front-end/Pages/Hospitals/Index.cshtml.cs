@@ -18,7 +18,7 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
-        await _client.AuthenticateAs(new User()
+        await _client.AuthenticateAs(new LoginRequest()
         {
             Email = "john.doe@dsh.ca.gov"
         });

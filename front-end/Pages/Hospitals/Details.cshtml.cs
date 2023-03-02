@@ -19,7 +19,7 @@ public class DetailsModel : PageModel
     public async Task OnGetAsync(string name)
     {
         Name = name;
-        await _client.AuthenticateAs(new User()
+        await _client.AuthenticateAs(new LoginRequest()
         {
             Email = "john.doe@dsh.ca.gov"
         });

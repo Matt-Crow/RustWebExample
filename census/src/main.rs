@@ -1,4 +1,4 @@
-use common::{user::User, http_client::HttpClient};
+use common::{user::LoginRequest, http_client::HttpClient};
 
 use crate::{census::CensusService, api_consumer::ExternalHospitalDataProvider};
 
@@ -10,7 +10,7 @@ async fn main() {
     println!("Conducting census...");
 
     let root_url = "http://localhost:8080"; // todo read from somewhere
-    let conductor = User::new("admin@dsh.ca.gov"); // todo read from somewhere
+    let conductor = LoginRequest::new("admin@dsh.ca.gov"); // todo read from somewhere
 
     let mut http_client = HttpClient::new(root_url);
     http_client.authenticate_as(&conductor)

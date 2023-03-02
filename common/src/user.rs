@@ -50,3 +50,21 @@ impl Clone for User {
         }
     }
 }
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct LoginRequest {
+    email: String
+    // a real system would also require password, etc
+}
+
+impl LoginRequest {
+    pub fn new<T: ToString>(email: T) -> Self {
+        Self {
+            email: email.to_string()
+        }
+    }
+
+    pub fn email(&self) -> String {
+        self.email.to_owned()
+    }
+}

@@ -2,14 +2,17 @@
 
 use std::env;
 
-use actix_web::{dev::ServiceRequest, Error, error::{ErrorInternalServerError, ErrorUnauthorized}, web::{ServiceConfig, post, Json}};
+use actix_web::{dev::ServiceRequest, Error, error::{ErrorInternalServerError, ErrorUnauthorized}, web::{ServiceConfig, post, Json, self}};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use chrono::{Utc, Duration};
 use jsonwebtoken::{encode, EncodingKey, Header, decode, DecodingKey, Validation, Algorithm};
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
 
-use common::user::User;
+use common::user::{User, LoginRequest};
+use tokio::sync::Mutex;
+
+use crate::user_services::UserService;
 
 const ISSUER: &str = "https://example.com";
 
@@ -27,9 +30,18 @@ pub fn configure_jwt_routes(cfg: &mut ServiceConfig) {
     cfg.route("/jwt", post().to(jwt_login_handler));
 }
 
-async fn jwt_login_handler(user: Json<User>) -> actix_web::Result<String> {
+async fn jwt_login_handler(
+    users: web::Data<Mutex<UserService>>,
+    login_request: Json<LoginRequest>
+) -> actix_web::Result<String> {
     // a production system would verify the user's credentials
-    match make_token(&user.0) {
+
+    let mut mutex = users.lock().await;
+    let user = mutex.get_user_by_email(&login_request.email())
+        .await
+        .map_err(ErrorInternalServerError)?;
+
+    match make_token(&user) {
         Ok(token) => Ok(token),
         Err(e) => Err(ErrorInternalServerError(e))
     }

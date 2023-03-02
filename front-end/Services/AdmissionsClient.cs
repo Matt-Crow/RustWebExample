@@ -18,7 +18,7 @@ public class AdmissionsClient
         _httpClient.BaseAddress = new Uri("http://localhost:8080/");
     }
 
-    public async Task AuthenticateAs(User user)
+    public async Task AuthenticateAs(LoginRequest user)
     {
         var result = await _httpClient.PostAsJsonAsync("/jwt", user);
         if (result is null)

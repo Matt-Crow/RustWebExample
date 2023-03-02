@@ -1,6 +1,6 @@
 // sets up authenticated & authorized client to consume APIs
 
-use crate::user::User;
+use crate::user::LoginRequest;
 use reqwest::{
     Result,
     Response
@@ -31,7 +31,7 @@ impl HttpClient {
     /// Ideally, this would use a more secure authentication scheme, but this is
     /// merely a demonstration of the techniques such a secure system could use,
     /// just as part of a more robust security system than this.
-    pub async fn authenticate_as(&mut self, user: &User) -> Result<String> {
+    pub async fn authenticate_as(&mut self, user: &LoginRequest) -> Result<String> {
         let token: String = reqwest::Client::new()
             .post(self.root_url.to_owned() + "/jwt")
             .json(user)
