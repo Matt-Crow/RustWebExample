@@ -42,7 +42,6 @@ and in another terminal
 `cargo clippy`
 
 ## Demo
-todo redo with waitlist
 
 This app demonstrates many of the basic features common to most REST APIs.
 1. run the app and open `Postman`
@@ -52,11 +51,7 @@ This app demonstrates many of the basic features common to most REST APIs.
    `POST` to `localhost:8080/jwt` with the following raw JSON body:
    ```
    {
-      "email": "you can put anything between these two quotes"
-      "groups": [
-         "group 1",
-         "group 2"
-      ]
+      "email": "example@dsh.ca.gov"
    }
    ```
    you should receive a long string with 2 '.'s in it
@@ -72,7 +67,12 @@ This app demonstrates many of the basic features common to most REST APIs.
    }
    ```
    You should receive `401 unauthorized`.
-8. `POST` to `localhost:8080/jwt`, but this time make sure you have the `admin` group.
+8. `POST` to `localhost:8080/jwt`, but this time as
+   ```
+   {
+      "email": "admin@dsh.ca.gov" 
+   }
+   ```
 9. repeat step 7 after setting your new bearer token
 10. `GET localhost:8080/api/v1/waitlist`
 11. `POST localhost:8080/api/v1/hospitals/admit-from-waitlist` - notice

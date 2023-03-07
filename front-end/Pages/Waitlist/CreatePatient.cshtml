@@ -1,0 +1,18 @@
+@page
+@model Admission.FrontEnd.Pages.Waitlist.CreatePatientModel;
+
+<h1>Create a new patient</h1>
+<form method="post">
+
+    <input asp-for="Form.PatientName"/>
+
+    <h2>Allowed hospitals</h2>
+    @for (var i = 0; i < Model.Form.AllowedHospitals.Count; i++)
+    {
+        @Html.CheckBoxFor(m => m.Form.AllowedHospitals[i].IsAllowed)
+        @Html.DisplayFor(m => m.Form.AllowedHospitals[i].HospitalName)
+        @Html.HiddenFor(m => m.Form.AllowedHospitals[i].HospitalName)
+    }
+
+    <input type="submit"/>
+</form>

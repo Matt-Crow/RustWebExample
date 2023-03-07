@@ -41,7 +41,9 @@ impl DatabaseGroupRepository {
         }
         self.add_email_to_group("mattcrow19@gmail.com", "admin").await?;
         self.add_email_to_group("mattcrow19@gmail.com", "student assistant").await?;
-        self.add_email_to_group("john.doe@gmail.com", "foo").await?;
+        self.add_email_to_group("example@dsh.ca.gov", "demo").await?;
+        self.add_email_to_group("admin@dsh.ca.gov", "demo").await?;
+        self.add_email_to_group("admin@dsh.ca.gov", "admin").await?;
         
         Ok(())
     }

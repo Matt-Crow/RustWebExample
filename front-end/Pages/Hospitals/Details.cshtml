@@ -1,0 +1,34 @@
+@page "{name}"
+@model Admission.FrontEnd.Pages.HospitalsModel.DetailsModel;
+
+<h1>@Model.Name</h1>
+
+@if (Model.Hospital is null)
+{
+    <p>Hospital not found with name @Model.Name</p>
+}
+else
+{
+    <h2>Patients</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var patient in Model.Hospital.Patients)
+            {
+                <tr>
+                    <td>@Html.DisplayFor(_ => patient.Name)</td>
+                    <td>
+                        <form asp-page-handler="UnadmitPatient" asp-route-hospital="@Model.Name" asp-route-id="@patient.Id">
+                            <button>unadmit</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

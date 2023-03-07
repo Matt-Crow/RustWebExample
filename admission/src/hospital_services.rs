@@ -1,6 +1,6 @@
 use std::fmt::Display;
 use async_trait::async_trait;
-use common::hospital::Hospital;
+use common::hospital::{Hospital, GetHospitalNames, GetHospitalNamesResponse, GetHospitalNamesRequest, HospitalError};
 
 pub struct HospitalService {
     repository: Box<dyn HospitalRepository + 'static>
@@ -23,6 +23,17 @@ impl HospitalService {
 
     pub async fn unadmit_patient_from_hospital(&mut self, patient_id: uuid::Uuid, hospital_name: &str) -> Result<Hospital, RepositoryError> {
         self.repository.remove_patient_from_hospital(patient_id, hospital_name).await
+    }
+}
+
+#[async_trait]
+impl GetHospitalNames for HospitalService {
+    async fn get_hospital_names(&mut self, _request: GetHospitalNamesRequest) -> Result<GetHospitalNamesResponse, HospitalError> {
+        self.get_all_hospitals()
+            .await
+            .map(|hospitals| hospitals.iter().map(Hospital::name).collect::<Vec<String>>())
+            .map(|names| GetHospitalNamesResponse::new(&names.into_iter().collect()))
+            .map_err(|_e| HospitalError::Other)
     }
 }
 

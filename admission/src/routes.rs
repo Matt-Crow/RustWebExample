@@ -7,10 +7,10 @@ use serde::Deserialize;
 use tokio::sync::Mutex;
 
 use crate::{
-    hospital_services::HospitalService, 
+    hospital_services::HospitalService,
     patient_services::{PatientService, PatientError}
 };
-use common::{hospital::{Hospital, Patient, AdmissionStatus}, hospital_names::HospitalNames};
+use common::{patient::Patient, hospital::{Hospital, GetHospitalNamesResponse}};
 
 pub fn configure_hospital_routes(cfg: &mut ServiceConfig) {
     cfg.service(
@@ -49,7 +49,7 @@ pub fn configure_hospital_routes(cfg: &mut ServiceConfig) {
 /// handles requests to GET /hospital-names
 async fn get_hospital_names_handler(
     hospitals: web::Data<Mutex<HospitalService>>
-) -> actix_web::Result<Json<HospitalNames>> {
+) -> actix_web::Result<Json<GetHospitalNamesResponse>> {
     
     let mut getter = hospitals.lock().await;
 
@@ -59,7 +59,7 @@ async fn get_hospital_names_handler(
             let names: HashSet<String> = hospitals.iter()
                 .map(|h| h.name())
                 .collect();
-            Json(HospitalNames::new(names))
+            Json(GetHospitalNamesResponse::new(&names))
         })
         .map_err(ErrorInternalServerError)
 }
@@ -107,6 +107,7 @@ async fn get_hospital_by_name(
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all="camelCase")]
 struct NewPatient {
     name: String,
     disallow_admission_to: Option<HashSet<String>>
@@ -144,8 +145,7 @@ async fn waitlist_post_handler(
 ) -> impl Responder {
     let mut service = patients.lock().await;
 
-    let mut patient = Patient::new(&posted.name)
-        .with_status(AdmissionStatus::New);
+    let mut patient = Patient::new(&posted.name);
 
     if let Some(ref disallowed_hospitals) = posted.disallow_admission_to {
         patient = patient.with_disallowed_hospitals(disallowed_hospitals);

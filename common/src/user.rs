@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 /// the system representation of a user
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct User {
 
     /// email must be unique within the user repository
@@ -47,5 +48,23 @@ impl Clone for User {
             email: self.email.clone(), 
             groups: self.groups.clone() 
         }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct LoginRequest {
+    email: String
+    // a real system would also require password, etc
+}
+
+impl LoginRequest {
+    pub fn new<T: ToString>(email: T) -> Self {
+        Self {
+            email: email.to_string()
+        }
+    }
+
+    pub fn email(&self) -> String {
+        self.email.to_owned()
     }
 }
