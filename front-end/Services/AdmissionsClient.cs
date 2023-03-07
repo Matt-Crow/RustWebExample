@@ -69,4 +69,9 @@ public class AdmissionsClient
         }
         return result;
     }
+
+    public async Task CreatePatient(Patient patient)
+    {
+        await _httpClient.PostAsJsonAsync("api/v1/waitlist", patient);
+    }
 }

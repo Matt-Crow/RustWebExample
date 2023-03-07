@@ -107,6 +107,7 @@ async fn get_hospital_by_name(
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all="camelCase")]
 struct NewPatient {
     name: String,
     disallow_admission_to: Option<HashSet<String>>
