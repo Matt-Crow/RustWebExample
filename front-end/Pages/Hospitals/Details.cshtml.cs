@@ -1,5 +1,6 @@
 using Admission.FrontEnd.Models;
 using Admission.FrontEnd.Services;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Admission.FrontEnd.Pages.HospitalsModel;
@@ -25,6 +26,16 @@ public class DetailsModel : PageModel
         });
         Hospital = await _client.GetHospitalByName(name);
         Hospital?.Patients.Sort(ComparePatients);
+    }
+
+    public async Task<ActionResult> OnPostUnadmitPatient(string hospital, Guid id)
+    {
+        await _client.AuthenticateAs(new LoginRequest()
+        {
+            Email = "admin@dsh.ca.gov"
+        });
+        await _client.Unadmit(hospital, id);
+        return RedirectToPage();
     }
 
     private static int ComparePatients(Patient a, Patient b)

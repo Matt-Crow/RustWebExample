@@ -14,6 +14,7 @@ else
         <thead>
             <tr>
                 <th>Name</th>
+                <th>Action</th>
             </tr>
         </thead>
         <tbody>
@@ -21,6 +22,11 @@ else
             {
                 <tr>
                     <td>@Html.DisplayFor(_ => patient.Name)</td>
+                    <td>
+                        <form asp-page-handler="UnadmitPatient" asp-route-hospital="@Model.Name" asp-route-id="@patient.Id">
+                            <button>unadmit</button>
+                        </form>
+                    </td>
                 </tr>
             }
         </tbody>

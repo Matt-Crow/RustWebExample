@@ -74,4 +74,14 @@ public class AdmissionsClient
     {
         await _httpClient.PostAsJsonAsync("api/v1/waitlist", patient);
     }
+
+    public async Task AdmitFromWaitlist()
+    {
+        await _httpClient.PostAsync("api/v1/hospitals/admit-from-waitlist", null);
+    }
+
+    public async Task Unadmit(string hospital, Guid patientId)
+    {
+        await _httpClient.DeleteAsync($"api/v1/hospitals/{hospital}/{patientId}");
+    }
 }

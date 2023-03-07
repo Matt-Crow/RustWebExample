@@ -1,5 +1,6 @@
 using Admission.FrontEnd.Models;
 using Admission.FrontEnd.Services;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Admission.FrontEnd.Pages;
@@ -23,6 +24,16 @@ public class WaitlistModel : PageModel
         });
         Patients = await _client.GetWaitlist();
         Patients.Sort(ComparePatients);
+    }
+
+    public async Task<ActionResult> OnPostAdmitFromWaitlist()
+    {
+        await _client.AuthenticateAs(new LoginRequest()
+        {
+            Email = "admin@dsh.ca.gov"
+        });
+        await _client.AdmitFromWaitlist();
+        return RedirectToPage();
     }
 
     private static int ComparePatients(Patient a, Patient b)
