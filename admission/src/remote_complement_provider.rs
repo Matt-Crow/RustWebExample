@@ -26,7 +26,9 @@ impl ComplementProvider for RemoteComplementProvider {
             .json(&body)
             .send()
             .await
-            .expect("request should be OK")
+            .expect("request should be OK") // "I don't want to be a responsible 
+                                            // programmer and handle the error,
+                                            // just fail here if it doesn't work"
             .json()
             .await
             .expect("should be able to convert to GetHospitalNamesResponse");

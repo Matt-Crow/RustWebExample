@@ -27,6 +27,11 @@ async fn main() -> std::io::Result<()> {
     let openid_service = OpenIdService::from_env()
         .await
         .expect("Should be able to start OpenID service");
+    // expect causes the program to crash if the result is not OK.
+    // Good for unrecoverable errors, or if an error occurs in a function that
+    // doesn't return Result. While it may be tempting to slap this everywhere
+    // so you don't have to propogate Results up the callers' return types,
+    // that will make things a lot harder in the long run.
 
     let pool = make_db_pool()
         .await
@@ -42,6 +47,9 @@ async fn main() -> std::io::Result<()> {
             .await
             .expect("Should be able to setup group repository");
         patient_repo.setup(|| async {
+            // Have to do this gore so the patient table gets dropped, then the
+            // hospital table gets dropped and setup, then the patient table
+            // gets setup. Could be written better, but that's the way I did it.
                 hospital_repo.setup()
                     .await
                     .expect("Should be able to setup hospital repository");
@@ -80,7 +88,7 @@ async fn main() -> std::io::Result<()> {
             .configure(configure_jwt_routes)
             .configure(configure_openid_routes)
             .service(web::scope("/api/v1") // register API routes
-                .wrap(HttpAuthentication::bearer(jwt_auth_middleware))
+                .wrap(HttpAuthentication::bearer(jwt_auth_middleware)) // apply JWT auth middleware
                 .configure(configure_hospital_routes)
             )
         })

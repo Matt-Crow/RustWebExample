@@ -1,8 +1,5 @@
-// models and services related to hospitals
-
 use async_trait::async_trait;
 use std::{fmt::{Debug, Display}, collections::HashSet};
-// the serde (SERialize DEserialize) crate helps convert data to & from JSON
 use serde::{Serialize, Deserialize};
 
 use crate::patient::Patient;

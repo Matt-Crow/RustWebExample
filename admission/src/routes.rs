@@ -6,12 +6,10 @@ use actix_web::{web::{ServiceConfig, resource, get, Json, self, post, delete}, e
 use serde::Deserialize;
 use tokio::sync::Mutex;
 
-use crate::{
-    hospital_services::HospitalService,
-    patient_services::{PatientService, PatientError}
-};
+use crate::{hospital_services::HospitalService, patient_services::{PatientService, PatientError}};
 use common::{patient::Patient, hospital::{Hospital, GetHospitalNamesResponse}};
 
+/// sets up routing
 pub fn configure_hospital_routes(cfg: &mut ServiceConfig) {
     cfg.service(
         resource("/hospital-names")
@@ -47,10 +45,25 @@ pub fn configure_hospital_routes(cfg: &mut ServiceConfig) {
 }
 
 /// handles requests to GET /hospital-names
+/// must be async to work with actix
 async fn get_hospital_names_handler(
+    // web::Data grabs shared state registered in main.rs
+    // register using web::Data<T>
+    // grab using web::Data<T>
+    // This is one way of doing dependency injection
     hospitals: web::Data<Mutex<HospitalService>>
+
+    // routing functions can return a lot of different things, not just this
+    // however, given how errors propogate up from lower layers, they usually
+    // need to return a Result to account for the possibility of errors
+    // actix web has its own Result type, not to be confused with Rust's
 ) -> actix_web::Result<Json<GetHospitalNamesResponse>> {
     
+    // Rust is really picky about shared concurrency - if we want to modify a
+    // shared resource, it must be wrapped in a mutex.
+    // Note that although getting is supposed to be a non-mutable operation,
+    // the various Tiberius query methods all require mutablity for some reason,
+    // so that mutablity also propogates upward.
     let mut getter = hospitals.lock().await;
 
     getter.get_all_hospitals()
@@ -65,14 +78,12 @@ async fn get_hospital_names_handler(
 }
 
 async fn get_all_hospitals(
-    // web::Data grabs shared state registered during app creation
     hospitals: web::Data<Mutex<HospitalService>>
 ) -> actix_web::Result<Json<Vec<Hospital>>> {
-    // actix web has its own Result type, not to be confused with Rust's
-    // since the app state is shared across threads, need mutex to use it
-    let mut mutex = hospitals.lock().await;
+    
+    let mut getter = hospitals.lock().await;
 
-    match mutex.get_all_hospitals().await {
+    match getter.get_all_hospitals().await {
         Ok(hospitals) => Ok(Json(hospitals)),
         Err(error) => Err(ErrorInternalServerError(error))
     }
@@ -81,6 +92,7 @@ async fn get_all_hospitals(
 async fn post_admit_from_waitlist_handler(
     patients: web::Data<Mutex<PatientService>>
 ) -> actix_web::Result<Json<Vec<Patient>>> {
+
     let mut admitter = patients.lock().await;
 
     match admitter.admit_patients_from_waitlist().await {
@@ -93,6 +105,7 @@ async fn get_hospital_by_name(
     hospitals: web::Data<Mutex<HospitalService>>,
     name: web::Path<String>
 ) -> actix_web::Result<Json<Hospital>> {
+
     let mut getter = hospitals.lock().await;
 
     match getter.get_hospital_by_name(&name).await {
@@ -104,13 +117,6 @@ async fn get_hospital_by_name(
             Err(ErrorInternalServerError(e))
         }
     }
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all="camelCase")]
-struct NewPatient {
-    name: String,
-    disallow_admission_to: Option<HashSet<String>>
 }
 
 async fn unadmit_patient(
@@ -138,13 +144,23 @@ async fn waitlist_get_handler(
         .map_err(ErrorInternalServerError)
 }
 
+// Can't use the full patient struct, as then the poster could provide the
+// patient ID or other details, which we don't want. It's oftentimes helpful to
+// create structures such as this that only contain a subset of another struct's
+// fields.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all="camelCase")]
+struct NewPatientRequest {
+    name: String,
+    disallow_admission_to: Option<HashSet<String>>
+}
+
 /// handles POST requests to add a new patient to the waitlist
 async fn waitlist_post_handler(
     patients: web::Data<Mutex<PatientService>>,
-    posted: Json<NewPatient>
+    posted: Json<NewPatientRequest>
 ) -> impl Responder {
-    let mut service = patients.lock().await;
-
+    
     let mut patient = Patient::new(&posted.name);
 
     if let Some(ref disallowed_hospitals) = posted.disallow_admission_to {
@@ -152,7 +168,11 @@ async fn waitlist_post_handler(
     }
     println!("Patient: {:#?}", patient);
 
-    match service.add_patient_to_waitlist(&patient).await {
+    // Wait as long as possible before locking - this minimizes the chance of
+    // this request blocking another. (keep a small Critical Section)
+    let mut waitlister = patients.lock().await;
+
+    match waitlister.add_patient_to_waitlist(&patient).await {
         Ok(stored) => Ok(HttpResponse::Created().json(stored)),
         Err(e) => match e {
             PatientError::AlreadyExists(id) => Err(ErrorBadRequest(format!("patient with ID {} already exists", id))),
