@@ -95,10 +95,10 @@ async fn post_admit_from_waitlist_handler(
 
     let mut admitter = patients.lock().await;
 
-    match admitter.admit_patients_from_waitlist().await {
-        Ok(patients) => Ok(Json(patients)),
-        Err(error) => Err(ErrorInternalServerError(error))
-    }
+    admitter.admit_patients_from_waitlist()
+        .await 
+        .map(|patients| Json(patients))
+        .map_err(|error| ErrorInternalServerError(error))
 }
 
 async fn get_hospital_by_name(
