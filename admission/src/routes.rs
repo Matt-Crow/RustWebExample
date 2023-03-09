@@ -97,26 +97,21 @@ async fn post_admit_from_waitlist_handler(
 
     admitter.admit_patients_from_waitlist()
         .await 
-        .map(|patients| Json(patients))
-        .map_err(|error| ErrorInternalServerError(error))
+        .map(Json)
+        .map_err(ErrorInternalServerError)
 }
 
 async fn get_hospital_by_name(
-    hospitals: web::Data<Mutex<HospitalService>>,
-    name: web::Path<String>
-) -> actix_web::Result<Json<Hospital>> {
+    hospitals: web::Data<Mutex<HospitalService>>, // grab shared data
+    name: web::Path<String> // grab from URL path
+) -> actix_web::Result<Json<Hospital>> { // return as JSON
 
     let mut getter = hospitals.lock().await;
 
-    match getter.get_hospital_by_name(&name).await {
-        Ok(maybe_hospital) => match maybe_hospital {
-            Some(hospital) => Ok(Json(hospital)),
-            None => Err(ErrorNotFound(format!("Invalid hospital name: {}", name)))        
-        },
-        Err(e) => {
-            Err(ErrorInternalServerError(e))
-        }
-    }
+    getter.get_hospital_by_name(&name).await
+        .map_err(ErrorInternalServerError)? // 500 error if getter fails
+        .map(Json)                          // 200 if found
+        .ok_or_else(|| ErrorNotFound(name)) // 404 if not found
 }
 
 async fn unadmit_patient(
