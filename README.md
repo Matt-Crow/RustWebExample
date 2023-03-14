@@ -1,5 +1,5 @@
 # Rust Web Example
-An example web application using Rust for the backend. It consists of 3 parts:
+An example web application using Rust for the backend. It consists of 5 parts:
 1. `admission`: a REST API that allows authenticated users to admit patients to
    a hospital, unadmit patients from a hospital, and view the patients admitted
    to a hospital.
@@ -7,6 +7,7 @@ An example web application using Rust for the backend. It consists of 3 parts:
    produces a report on how many patients are admitted.
 3. `common`: contains code shared by both other parts.
 4. `complement`: computes set complement for `admission`
+5. `front-end`: consumes the API from `admission`
 
 ## Setting up the database
 1. create a database `RustDB`
@@ -33,13 +34,24 @@ callback URL!
 - `OPENID_CLIENT_SECRET`: the app's secret registered with the OpenID provider
 
 ## Running the App
+
 `cargo run -p admission`
+
 and in another terminal
+
 `cargo run -p complement`
 
+and in yet another terminal
+```
+cd front-end
+dotnet run
+```
+
 ## Testing the App
-`cargo test`
-`cargo clippy`
+```
+cargo test
+cargo clippy
+```
 
 ## Demo
 

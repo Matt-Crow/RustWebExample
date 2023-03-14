@@ -20,6 +20,7 @@ public class AdmissionsClient
 
     public async Task AuthenticateAs(LoginRequest user)
     {
+        // dubiously authentication practice - probably shouldn't do this!
         var result = await _httpClient.PostAsJsonAsync("/jwt", user);
         if (result is null)
         {
